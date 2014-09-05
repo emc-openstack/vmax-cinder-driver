@@ -109,27 +109,26 @@ By issuing these commands, the Cinder volume type VMAX_ISCSI is associated with 
 
 For more details on multi-backend configuration, see OpenStack Administration Guide
 
-EMC-specific Configuration Files
+## EMC-specific Configuration Files
 
 Each enabled backend is configured via parameters contained in an EMC-specific configuration file. The default EMC configuration file is named /etc/cinder/cinder_emc config.xml, and is configured for the iSCSI driver by default. When multiple backends are configured in cinder.conf, the names of each configuration group’s file is explicitly provided in the cinder_emc_config_file parameter.
 
 Here is an example and description of the contents:
 
-<?xml version='1.0' encoding='UTF-8'?>
-<EMC>
-   <EcomServerIp>10.108.246.202</EcomServerIp>
-   <EcomServerPort>5988</EcomServerPort>
-   <EcomUserName>admin</EcomUserName>
-   <EcomPassword>#1Password</EcomPassword>
-   <PortGroups>
-	<PortGroup>OS-PORTGROUP1-PG</PortGroup>
-	<PortGroup>OS-PORTGROUP2-PG</PortGroup>
-   </PortGroups>
-   <Array>000198700439</Array>
-   <Pool>FC_GOLD1</Pool>
-   <FastPolicy>GOLD1</FastPolicy>
-</EMC>
-
+    <?xml version='1.0' encoding='UTF-8'?>
+    <EMC>
+       <EcomServerIp>10.108.246.202</EcomServerIp>
+       <EcomServerPort>5988</EcomServerPort>
+       <EcomUserName>admin</EcomUserName>
+       <EcomPassword>#1Password</EcomPassword>
+       <PortGroups>
+           <PortGroup>OS-PORTGROUP1-PG</PortGroup>
+	   <PortGroup>OS-PORTGROUP2-PG</PortGroup>
+       </PortGroups>
+       <Array>000198700439</Array>
+       <Pool>FC_GOLD1</Pool>
+       <FastPolicy>GOLD1</FastPolicy>
+    </EMC>
   
 EcomServerIp, EcomServerPort, EcomUserName and EcomPassword identify the ECOM (EMC SMI-S Provider) server to be used, and provide logon credentials.
 
@@ -148,40 +147,42 @@ For backends not using FAST automated tiering, the pool is a single pool that ha
 For backends exposing FAST policy automated tiering, the pool name is the bind pool to be used with the FAST policy.
 The FastPolicy tag conveys the name of the FAST Policy to be used. By including this tag, volumes managed by this backend are treated as under FAST control.  Omitting the FastPolicy tag means FAST is not enabled on the provided storage pool. 
  
-Configuring Connectivity
+## Configuring Connectivity
 
-FC Zoning with VMAX
+### FC Zoning with VMAX
 
 With the Icehouse release of OpenStack, a Zone Manager has been added to automate Fibre Channel zone management. Havana does not support this functionality.  It is recommended to upgrade to the Juno release if you require FC zoning.
 
-iSCSI with VMAX
+### iSCSI with VMAX
 *	Make sure the “iscsi-initiator-utils” package is installed on the host (use apt-get, zypper or yum, depending on Linux flavor)
 *	Verify host is able to ping VMAX iSCSI target ports
 
-VMAX Masking View and Group Naming Info
+## VMAX Masking View and Group Naming Info
 
-Masking View Names
+### Masking View Names
 
 Masking views for the VMAX FC and iSCSI drivers are now dynamically created by the VMAX Cinder driver using the following naming conventions:
 
-OS-<shortHostName><poolName>-I-MV (for Masking Views using iSCSI)
-OS-<shortHostName><poolName>-F-MV (for Masking Views using FC)
+    OS-<shortHostName><poolName>-I-MV (for Masking Views using iSCSI)
+    OS-<shortHostName><poolName>-F-MV (for Masking Views using FC)
 
-Initiator Group Names
-For each host that is attached to VMAX volumes using the Cinder drivers, an initiator group is created or re-used (per attachment type). All initiators of appropriate type known for that host are included in the group. At each new attach volume operation, the VMAX driver retrieves the initiators (either WWNNs or IQNs) from OpenStack and adds or updates the contents of the Initiator Group as required. Names are of the format: OS-<shortHostName>-I-IG (for iSCSI initiators)
-OS-<shortHostName>-F-IG (for Fibre Channel initiators)
+### Initiator Group Names
+For each host that is attached to VMAX volumes using the Cinder drivers, an initiator group is created or re-used (per attachment type). All initiators of appropriate type known for that host are included in the group. At each new attach volume operation, the VMAX driver retrieves the initiators (either WWNNs or IQNs) from OpenStack and adds or updates the contents of the Initiator Group as required. Names are of the format:
+
+    OS-<shortHostName>-I-IG (for iSCSI initiators)
+    OS-<shortHostName>-F-IG (for Fibre Channel initiators)
 
 Note: Hosts attaching to VMAX storage managed by the OpenStack environment cannot also be attached to storage on the same VMAX not being managed by OpenStack. This is due to limitations on VMAX Initiator Group membership.
 
-FA Port Groups 
+### FA Port Groups 
 VMAX array FA ports to be used in a new masking view are chosen from the list provided in the EMC configuration file.  (See EMC-specific Configuration Files above)
 
-Storage Group Names
+### Storage Group Names
 As volumes are attached to a host, they are either added to an existing storage group (if it exists) or a new storage group is created and the volume is then added. Storage groups contain volumes created from a pool (either single-pool or FAST-controlled), attached to a single host, over a single connection type (iSCSI or FC). Names are formed:
-OS-<shortHostName><poolName>-I-SG (attached over iSCSI)
-OS-<shortHostName><poolName>-F-SG (attached over Fibre Channel)
+    OS-<shortHostName><poolName>-I-SG (attached over iSCSI)
+    OS-<shortHostName><poolName>-F-SG (attached over Fibre Channel)
 
-Concatenated/Striped volumes
+### Concatenated/Striped volumes
 In order to support later expansion of created volumes, the VMAX Cinder drivers create concatenated volumes as the default layout. If later expansion is not required, users can opt to create striped volumes in order to optimize I/O performance.  
 
 Below is an example of how to create striped volumes. First, create a volume type. Then define the extra spec for the volume type -- storagetype:stripecount  represents the number of strips you want to make up your volume. The example below means that all volumes created under the GoldStriped volume type will be striped and made up of 4 stripes  
