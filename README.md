@@ -10,8 +10,8 @@ Licensed under the Apache License, Version 2.0 (the "License"); you may not use 
 ## Overview
 
 This package consists of two drivers:
-•	EMCVMAXFCDriver, based on the Cinder FibreChannelDriver 
-•	EMCVMAXISCSIDriver, based on the Cinder ISCSIDriver 
+*	EMCVMAXFCDriver, based on the Cinder FibreChannelDriver 
+*	EMCVMAXISCSIDriver, based on the Cinder ISCSIDriver 
 
 These drivers support the use of EMC VMAX storage arrays under OpenStack Cinder block management.  They both provide equivalent functions and differ only in support for their respective host attachment methods. 
 
@@ -22,46 +22,46 @@ EMC Cinder drivers also require PyWBEM, a client library written in Python that 
 ## OpenStack Release Support
 
 This driver package supports the Havana release. Compared to previously released versions, enhancements include:
-•	Support for multiple VMAX arrays
-•	Support for per-array ECOM servers
-•	Multiple Pool Support
-•	FAST automated storage tiering policy support
-•	Dynamic masking view creation (FC and iSCSI)
-•	Striped volume creation
-•	Storage-Assisted Volume Migration
+*	Support for multiple VMAX arrays
+*	Support for per-array ECOM servers
+*	Multiple Pool Support
+*	FAST automated storage tiering policy support
+*	Dynamic masking view creation (FC and iSCSI)
+*	Striped volume creation
+*	Storage-Assisted Volume Migration
 
 ## Supported Operations
 
 The following operations are supported on VMAX arrays:
-•	Create volume
-•	Delete volume
-•	Extend volume
-•	Attach volume
-•	Detach volume
-•	Retype volume
-•	Create snapshot
-•	Delete snapshot
-•	Create volume from snapshot
-•	Create cloned volume
-•	Copy Image to Volume
-•	Copy Volume to Image
+*	Create volume
+*	Delete volume
+*	Extend volume
+*	Attach volume
+*	Detach volume
+*	Retype volume
+*	Create snapshot
+*	Delete snapshot
+*	Create volume from snapshot
+*	Create cloned volume
+*	Copy Image to Volume
+*	Copy Volume to Image
 
 ## Required Software Packages
 
 ### Install SMI-S Provider with Solutions Enabler
-•	Required version: EMC SMI-S Provider 4.6.2.9 or higher 
-•	SMI-S Provider is available from available from EMC’s support website
-•	The SMI-S Provider with Solutions Enabler can be installed as a vApp, or on a Windows or Linux host
+*	Required version: EMC SMI-S Provider 4.6.2.9 or higher 
+*	SMI-S Provider is available from available from EMC’s support website
+*	The SMI-S Provider with Solutions Enabler can be installed as a vApp, or on a Windows or Linux host
 
 ### Install PyWBEM
-•	Required version: PyWBEM 0.7
-•	Available from Sourceforge, or using the following commands:
-o	Install for Ubuntu:
-# apt-get install python-pywbem
-o	Install on openSUSE:
-# zypper install python-pywbem
-o	Install on Fedora:
-# yum install pywbem
+*	Required version: PyWBEM 0.7
+*	Available from Sourceforge, or using the following commands:
+**	Install for Ubuntu:
+    # apt-get install python-pywbem
+**	Install on openSUSE:
+    # zypper install python-pywbem
+**	Install on Fedora:
+    # yum install pywbem
 
 ### Verify the EMC VMAX Cinder driver files
 EMC VMAX Drivers provided in the installer package consists of seven python files:
@@ -155,8 +155,8 @@ FC Zoning with VMAX
 With the Icehouse release of OpenStack, a Zone Manager has been added to automate Fibre Channel zone management. Havana does not support this functionality.  It is recommended to upgrade to the Juno release if you require FC zoning.
 
 iSCSI with VMAX
-•	Make sure the “iscsi-initiator-utils” package is installed on the host (use apt-get, zypper or yum, depending on Linux flavor)
-•	Verify host is able to ping VMAX iSCSI target ports
+*	Make sure the “iscsi-initiator-utils” package is installed on the host (use apt-get, zypper or yum, depending on Linux flavor)
+*	Verify host is able to ping VMAX iSCSI target ports
 
 VMAX Masking View and Group Naming Info
 
