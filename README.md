@@ -54,17 +54,23 @@ The following operations are supported on VMAX arrays:
 *	The SMI-S Provider with Solutions Enabler can be installed as a vApp, or on a Windows or Linux host
 
 ### Install PyWBEM
-*	Required version: PyWBEM 0.7
-*	Available from Sourceforge, or using the following commands:
-**	Install for Ubuntu:
-    # apt-get install python-pywbem
-**	Install on openSUSE:
-    # zypper install python-pywbem
-**	Install on Fedora:
-    # yum install pywbem
+* Required version: PyWBEM 0.7
+* Available from Sourceforge, or using the following commands:
+    * Install for Ubuntu:
+    
+            # apt-get install python-pywbem
+
+    * Install on openSUSE:
+    
+            # zypper install python-pywbem
+            
+    * Install on Fedora:
+
+            # yum install pywbem
 
 ### Verify the EMC VMAX Cinder driver files
 EMC VMAX Drivers provided in the installer package consists of seven python files:
+
     emc_vmax_fc.py
     emc_vmax_iscsi.py
     emc_vmax_common.py
@@ -72,6 +78,7 @@ EMC VMAX Drivers provided in the installer package consists of seven python file
     emc_vmax_fast.py
     emc_vmax_provision.py
     emc_vmax_utils.py
+
 These files are located in the ../cinder/volume/drivers/emc/ directory of OpenStack node(s) where cinder-volume is running.
 
 ## Cinder Backend Configuration
