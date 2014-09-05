@@ -1,9 +1,13 @@
-vmax-cinder-driver
-==================
+# VMAX Driver (FC and iSCSI)
 
-VMAX Driver (FC and iSCSI)
+Copyright (c) 2014 EMC Corporation.
+All Rights Reserved.
 
-Overview
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+## Overview
 
 This package consists of two drivers:
 •	EMCVMAXFCDriver, based on the Cinder FibreChannelDriver 
@@ -15,7 +19,7 @@ The drivers perform volume operations through use of the EMC SMI-S Provider, whi
 
 EMC Cinder drivers also require PyWBEM, a client library written in Python that communicates with the SMI-S provider over HTTP. 
 
-OpenStack Release Support
+## OpenStack Release Support
 
 This driver package supports the Havana release. Compared to previously released versions, enhancements include:
 •	Support for multiple VMAX arrays
@@ -26,7 +30,7 @@ This driver package supports the Havana release. Compared to previously released
 •	Striped volume creation
 •	Storage-Assisted Volume Migration
 
-Supported Operations
+## Supported Operations
 
 The following operations are supported on VMAX arrays:
 •	Create volume
@@ -42,14 +46,14 @@ The following operations are supported on VMAX arrays:
 •	Copy Image to Volume
 •	Copy Volume to Image
 
-Required Software Packages
+## Required Software Packages
 
-Install SMI-S Provider with Solutions Enabler
+### Install SMI-S Provider with Solutions Enabler
 •	Required version: EMC SMI-S Provider 4.6.2.9 or higher 
 •	SMI-S Provider is available from available from EMC’s support website
 •	The SMI-S Provider with Solutions Enabler can be installed as a vApp, or on a Windows or Linux host
 
-Install PyWBEM
+### Install PyWBEM
 •	Required version: PyWBEM 0.7
 •	Available from Sourceforge, or using the following commands:
 o	Install for Ubuntu:
@@ -59,7 +63,7 @@ o	Install on openSUSE:
 o	Install on Fedora:
 # yum install pywbem
 
-Verify the EMC VMAX Cinder driver files
+### Verify the EMC VMAX Cinder driver files
 EMC VMAX Drivers provided in the installer package consists of seven python files:
     emc_vmax_fc.py
     emc_vmax_iscsi.py
@@ -70,7 +74,7 @@ EMC VMAX Drivers provided in the installer package consists of seven python file
     emc_vmax_utils.py
 These files are located in the ../cinder/volume/drivers/emc/ directory of OpenStack node(s) where cinder-volume is running.
 
-Cinder Backend Configuration
+## Cinder Backend Configuration
 
 The EMC VMAX drivers are written to support multiple types of storage, as configured by the OpenStack Cinder administrator. Each storage type is implemented by configuring one or more Cinder backends mapped to that type. If multiple storage types are desired, multi-backend support must be enabled in the cinder.conf file as shown:
 
@@ -96,12 +100,10 @@ In this example, two backend configuration groups are enabled: CONF_GROUP_ISCSI 
 
 Once the cinder.conf and EMC-specific configuration files have been created, cinder commands need to be issued in order to create and associate OpenStack volume types with the declared volume_backend_names:
   
-# cinder type-create VMAX_ISCSI
-# cinder type-key VMAX_ISCSI set volume_backend_name=ISCSI_backend
-
-# cinder type-create VMAX_FC
-# cinder type-key VMAX_FC set volume_backend_name=FC_backend
- 
+        # cinder type-create VMAX_ISCSI
+        # cinder type-key VMAX_ISCSI set volume_backend_name=ISCSI_backend
+        # cinder type-create VMAX_FC
+        # cinder type-key VMAX_FC set volume_backend_name=FC_backend
 
 By issuing these commands, the Cinder volume type VMAX_ISCSI is associated with the ISCSI_backend, and the type VMAX_FC associated with FC_backend
 
@@ -184,7 +186,7 @@ In order to support later expansion of created volumes, the VMAX Cinder drivers 
 
 Below is an example of how to create striped volumes. First, create a volume type. Then define the extra spec for the volume type -- storagetype:stripecount  represents the number of strips you want to make up your volume. The example below means that all volumes created under the GoldStriped volume type will be striped and made up of 4 stripes  
    
-# cinder type-create GoldStriped
-# cinder type-key GoldStriped set volume_backend_name=GOLD_BACKEND
-# cinder type-key GoldStriped set storagetype:stripecount=4
+        # cinder type-create GoldStriped
+        # cinder type-key GoldStriped set volume_backend_name=GOLD_BACKEND
+        # cinder type-key GoldStriped set storagetype:stripecount=4
 
