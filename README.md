@@ -50,12 +50,12 @@ The following operations are supported on VMAX arrays:
 
 ### Install SMI-S Provider with Solutions Enabler
 *	Required version: EMC SMI-S Provider 4.6.2.9 or higher 
-*	SMI-S Provider is available from available from EMC’s support website
+*	SMI-S Provider is available from available from [EMC’s support website](https://support.emc.com)
 *	The SMI-S Provider with Solutions Enabler can be installed as a vApp, or on a Windows or Linux host
 
 ### Install PyWBEM
 * Required version: PyWBEM 0.7
-* Available from Sourceforge, or using the following commands:
+* Available from [Sourceforge](http://sourceforge.net/projects/pywbem), or using the following commands:
     * Install for Ubuntu:
     
             # apt-get install python-pywbem
@@ -114,7 +114,7 @@ Once the cinder.conf and EMC-specific configuration files have been created, cin
 
 By issuing these commands, the Cinder volume type VMAX_ISCSI is associated with the ISCSI_backend, and the type VMAX_FC associated with FC_backend
 
-For more details on multi-backend configuration, see OpenStack Administration Guide
+For more details on multi-backend configuration, see [OpenStack Administration Guide](http://docs.openstack.org/admin-guide-cloud/content/multi_backend.html).
 
 ## EMC-specific Configuration Files
 
