@@ -85,20 +85,20 @@ These files are located in the ../cinder/volume/drivers/emc/ directory of OpenSt
 
 The EMC VMAX drivers are written to support multiple types of storage, as configured by the OpenStack Cinder administrator. Each storage type is implemented by configuring one or more Cinder backends mapped to that type. If multiple storage types are desired, multi-backend support must be enabled in the cinder.conf file as shown:
 
-[DEFAULT]
+    [DEFAULT]
 
-    enabled_backends=CONF_GROUP_ISCSI, CONF_GROUP_FC
+        enabled_backends=CONF_GROUP_ISCSI, CONF_GROUP_FC
 
-    [CONF_GROUP_ISCSI]
-    iscsi_ip_address = 10.10.0.50
-    volume_driver=cinder.volume.drivers.emc.emc_vmax_iscsi.EMCVMAXISCSIDriver
-    cinder_emc_config_file=/etc/cinder/cinder_emc_config_CONF_GROUP_ISCSI.xml
-    volume_backend_name=ISCSI_backend
+        [CONF_GROUP_ISCSI]
+        iscsi_ip_address = 10.10.0.50
+        volume_driver=cinder.volume.drivers.emc.emc_vmax_iscsi.EMCVMAXISCSIDriver
+        cinder_emc_config_file=/etc/cinder/cinder_emc_config_CONF_GROUP_ISCSI.xml
+        volume_backend_name=ISCSI_backend
 
-    [CONF_GROUP_FC]
-    volume_driver=cinder.volume.drivers.emc.emc_vmax_fc.EMCVMAXFCDriver
-    cinder_emc_config_file=/etc/cinder/cinder_emc_config_CONF_GROUP_FC.xml
-    volume_backend_name=FC_backend
+        [CONF_GROUP_FC]
+        volume_driver=cinder.volume.drivers.emc.emc_vmax_fc.EMCVMAXFCDriver
+        cinder_emc_config_file=/etc/cinder/cinder_emc_config_CONF_GROUP_FC.xml
+        volume_backend_name=FC_backend
 
  
 NOTE: iscsi_ip_address is required in an ISCSI configuration.  This is the IP Address of the VMAX iscsi target.
