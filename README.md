@@ -152,6 +152,7 @@ NOTE: For this version of the driver, we do not support over subscription of poo
 For backends not using FAST automated tiering, the pool is a single pool that has been created by the admin. 
 
 For backends exposing FAST policy automated tiering, the pool name is the bind pool to be used with the FAST policy.
+
 The FastPolicy tag conveys the name of the FAST Policy to be used. By including this tag, volumes managed by this backend are treated as under FAST control.  Omitting the FastPolicy tag means FAST is not enabled on the provided storage pool. 
  
 ## Configuring Connectivity
@@ -167,7 +168,6 @@ With the Icehouse release of OpenStack, a Zone Manager has been added to automat
 ## VMAX Masking View and Group Naming Info
 
 ### Masking View Names
-
 Masking views for the VMAX FC and iSCSI drivers are now dynamically created by the VMAX Cinder driver using the following naming conventions:
 
     OS-<shortHostName><poolName>-I-MV (for Masking Views using iSCSI)
@@ -186,10 +186,11 @@ VMAX array FA ports to be used in a new masking view are chosen from the list pr
 
 ### Storage Group Names
 As volumes are attached to a host, they are either added to an existing storage group (if it exists) or a new storage group is created and the volume is then added. Storage groups contain volumes created from a pool (either single-pool or FAST-controlled), attached to a single host, over a single connection type (iSCSI or FC). Names are formed:
+
     OS-<shortHostName><poolName>-I-SG (attached over iSCSI)
     OS-<shortHostName><poolName>-F-SG (attached over Fibre Channel)
 
-### Concatenated/Striped volumes
+## Concatenated/Striped volumes
 In order to support later expansion of created volumes, the VMAX Cinder drivers create concatenated volumes as the default layout. If later expansion is not required, users can opt to create striped volumes in order to optimize I/O performance.  
 
 Below is an example of how to create striped volumes. First, create a volume type. Then define the extra spec for the volume type -- storagetype:stripecount  represents the number of strips you want to make up your volume. The example below means that all volumes created under the GoldStriped volume type will be striped and made up of 4 stripes  
