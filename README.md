@@ -28,7 +28,6 @@ This driver package supports the Havana release. Compared to previously released
 *	FAST automated storage tiering policy support
 *	Dynamic masking view creation (FC and iSCSI)
 *	Striped volume creation
-*	Storage-Assisted Volume Migration
 
 ## Supported Operations
 
@@ -38,7 +37,6 @@ The following operations are supported on VMAX arrays:
 *	Extend volume
 *	Attach volume
 *	Detach volume
-*	Retype volume
 *	Create snapshot
 *	Delete snapshot
 *	Create volume from snapshot
