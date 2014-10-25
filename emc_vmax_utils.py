@@ -59,7 +59,7 @@ class EMCVMAXUtils(object):
                 'Module PyWBEM not installed.  '
                 'Install PyWBEM using the python-pywbem package.'))
         self.protocol = prtcl
-        
+
 
     def find_storage_configuration_service(self, conn, storageSystemName):
         """Given the storage system name, get the storage configuration service
@@ -133,7 +133,7 @@ class EMCVMAXUtils(object):
                 foundElementCompositionService = elementCompositionService
                 LOG.debug("Found Element Composition Service:"
                           "%(elementCompositionService)s"
-                          % {'elementCompositionService': elementCompositionService})                                             
+                          % {'elementCompositionService': elementCompositionService})
                 break
         if foundElementCompositionService is None:
             exceptionMessage = (_("Element Composition Service not found "
@@ -159,7 +159,7 @@ class EMCVMAXUtils(object):
                 foundStorageRelocationService = storageRelocationService
                 LOG.debug("Found Element Composition Service:"
                     "%(storageRelocationService)s"
-                    % {'storageRelocationService': storageRelocationService})  
+                    % {'storageRelocationService': storageRelocationService})
                 break
 
         if foundStorageRelocationService is None:
@@ -186,7 +186,7 @@ class EMCVMAXUtils(object):
                 foundHardwareService = storageHardwareservice
                 LOG.debug("Found Storage Hardware ID Management Service:"
                           "%(storageHardwareservice)s"
-                        % {'storageHardwareservice': storageHardwareservice})  
+                        % {'storageHardwareservice': storageHardwareservice})
                 break
 
         if foundHardwareService is None:
@@ -213,7 +213,7 @@ class EMCVMAXUtils(object):
                 foundRepService = repservice
                 LOG.debug("Found Replication Service:"
                           "%(repservice)s"
-                        % {'repservice': repservice})  
+                        % {'repservice': repservice})
                 break
         if foundRepService is None:
             exceptionMessage = (_("Replication Service not found "
@@ -252,7 +252,7 @@ class EMCVMAXUtils(object):
             raise exception.VolumeBackendAPIException(data=exceptionMessage)
 
         return foundTierPolicyService
-    
+
     def wait_for_job_complete(self, conn, job):
         """Given the job wait for it to complete.
 
@@ -261,7 +261,7 @@ class EMCVMAXUtils(object):
         :returns: rc - the return code
         :returns: errorDesc - the error description string
         """
-        
+
         jobInstanceName = job['Job']
         self._wait_for_job_complete(conn, job)
         jobinstance = conn.GetInstance(jobInstanceName,
@@ -274,8 +274,8 @@ class EMCVMAXUtils(object):
                      'errorDesc': errorDesc})
 
         return rc, errorDesc
-        
-        
+
+
 
     def _wait_for_job_complete(self, conn, job):
         """Given the job wait for it to complete.
@@ -283,15 +283,15 @@ class EMCVMAXUtils(object):
         :param conn: connection the ecom server
         :param job: the job dict
         """
-        
+
         def _wait_for_job_complete():
             """Called at an interval until the job is finished"""
             if self._is_job_finished(conn, job):
                 raise loopingcall.LoopingCallDone()
             if self.retries > JOB_RETRIES:
-                LOG.error(_("_wait_for_job_complete failed after %(retries)d tries") 
+                LOG.error(_("_wait_for_job_complete failed after %(retries)d tries")
                           % {'retries': self.retries})
-    
+
                 raise loopingcall.LoopingCallDone()
             try:
                 self.retries += 1
@@ -303,22 +303,22 @@ class EMCVMAXUtils(object):
                 exceptionMessage = (_("Issue encountered waiting for job."))
                 LOG.error(exceptionMessage)
                 raise exception.VolumeBackendAPIException(exceptionMessage)
-            
+
         self.retries = 0
         self.wait_for_job_called = False
         timer = loopingcall.FixedIntervalLoopingCall(_wait_for_job_complete)
         timer.start(interval=INTERVAL_10_SEC).wait()
-        
-       
-    
+
+
+
     def _is_job_finished(self, conn, job):
         """Check if the job is finished.
         :param conn: connection the ecom server
         :param job: the job dict
 
-        :returns: True if finished; False if not finished; 
+        :returns: True if finished; False if not finished;
         """
-        
+
         jobInstanceName = job['Job']
         jobinstance = conn.GetInstance(jobInstanceName,
                                        LocalOnly=False)
@@ -337,7 +337,7 @@ class EMCVMAXUtils(object):
             return False
         else:
             return True
-        
+
 
     def get_num(self, numStr, datatype):
         """Get the ecom int from the number.
@@ -560,8 +560,8 @@ class EMCVMAXUtils(object):
     def parse_file_to_get_port_group_name(self, fileName):
         """Parses a file and chooses a port group randomly.
 
-        Given a file, parse it to get all the possible portGroups and choose
-        one randomly.
+        Given a file, parse it to get all the possible
+        portGroupElements and choose one randomly.
 
         :param fileName: the path and name of the file
         :returns: portGroupName - the name of the port group chosen
@@ -571,27 +571,34 @@ class EMCVMAXUtils(object):
         data = myFile.read()
         myFile.close()
         dom = parseString(data)
-        portGroups = dom.getElementsByTagName('PortGroups')
-        if portGroups is not None and len(portGroups) > 0:
-            portGroupsXml = portGroups[0].toxml()
-            portGroupsXml = portGroupsXml.replace('<PortGroups>', '')
-            portGroupsXml = portGroupsXml.replace('</PortGroups>', '')
-            portGroupsXml = portGroupsXml.replace('<PortGroup>', '')
-            portGroupsXml = portGroupsXml.replace('</PortGroup>', '')
-            # convert the newline separated string to a list
-            portGroupNames = (
-                [s.strip() for s in portGroupsXml.split('\n') if s])
+        portGroupElements = dom.getElementsByTagName('PortGroup')
 
+        if portGroupElements is not None and len(portGroupElements) > 0:
+            portGroupNames = []
+            for portGroupElement in portGroupElements:
+                if portGroupElement.hasChildNodes():
+                    portGroupName = portGroupElement.childNodes[0].nodeValue
+                    portGroupName = portGroupName.replace('\n', '')
+                    portGroupName = portGroupName.replace('\r', '')
+                    portGroupName = portGroupName.replace('\t', '')
+                    portGroupName = portGroupName.strip()
+                    if portGroupName:
+                        portGroupNames.append(portGroupName)
+
+            LOG.debug("portGroupNames: %(portGroupNames)s"
+                      % {'portGroupNames': portGroupNames})
             numPortGroups = len(portGroupNames)
+            if numPortGroups > 0:
+                selectedPortGroupName = (
+                    portGroupNames[random.randint(0, numPortGroups - 1)])
+                LOG.debug("Returning Selected Port Group: "
+                          "'%(selectedPortGroupName)s'"
+                          % {'selectedPortGroupName': selectedPortGroupName})
+                return selectedPortGroupName
 
-            portGroupName = (
-                portGroupNames[random.randint(0, numPortGroups - 1)])
-
-            return portGroupName
-        else:
-            exception_message = (_("Port Group name not found."))
-            LOG.error(exception_message)
-            raise exception.VolumeBackendAPIException(data=exception_message)
+        exception_message = (_("No Port Group elements found in config file."))
+        LOG.error(exception_message)
+        raise exception.VolumeBackendAPIException(data=exception_message)
 
     def parse_fast_policy_name_from_file(self, fileName):
         """Parse the fast policy name from config file.  If it is not there

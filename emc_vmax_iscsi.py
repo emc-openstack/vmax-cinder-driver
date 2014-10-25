@@ -37,7 +37,7 @@ class EMCVMAXISCSIDriver(driver.ISCSIDriver):
         2.0.0 - Add driver requirement functions
     """
 
-    VERSION = "2.0.0"
+    VERSION = "2.0.0hi"
 
     def __init__(self, *args, **kwargs):
 

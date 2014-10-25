@@ -68,7 +68,7 @@ class EMCVMAXCommon(object):
 
     """
 
-    stats = {'driver_version': '1.0',
+    stats = {'driver_version': '2.0.0hi',
              'free_capacity_gb': 0,
              'reserved_percentage': 0,
              'storage_protocol': None,
@@ -640,7 +640,7 @@ class EMCVMAXCommon(object):
                 'QoS_support': False,
                 'volume_backend_name': backendName or self.__class__.__name__,
                 'vendor_name': "EMC",
-                'driver_version': '1.0',
+                'driver_version': '2.0.0hi',
                 'storage_protocol': 'unknown',
                 'location_info': location_info}
 
