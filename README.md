@@ -1,3 +1,3 @@
 # VMAX Cinder Driver
 
-See havana branch for the VMAX Cinder driver that supports Havana and Icehouse.
+See havana_icehouse branch for the VMAX Cinder driver that supports Havana and Icehouse.
