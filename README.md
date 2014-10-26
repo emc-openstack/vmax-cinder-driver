@@ -21,7 +21,7 @@ EMC Cinder drivers also require PyWBEM, a client library written in Python that 
 
 ## OpenStack Release Support
 
-This driver package supports the Havana release. Compared to previously released versions, enhancements include:
+This driver package supports the Havana and Icehouse releases. Compared to previously released versions, enhancements include:
 *	Support for multiple VMAX arrays
 *	Support for per-array ECOM servers
 *	Multiple Pool Support
