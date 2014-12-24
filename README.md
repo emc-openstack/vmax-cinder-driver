@@ -1,3 +1,4 @@
 # VMAX Cinder Driver
 
-See havana_icehouse branch for the VMAX Cinder driver that supports Havana and Icehouse.
+The driver in the master branch supports Kilo and Juno.
+For the driver that supports Icehouse and Havana, go to the havana_icehouse branch. 
