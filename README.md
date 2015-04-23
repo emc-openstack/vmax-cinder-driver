@@ -53,7 +53,7 @@ The following operations are supported on VMAX arrays:
 ## Required Software Packages
 
 ### Install SMI-S Provider with Solutions Enabler
-*	Required version: EMC SMI-S Provider 4.6.2.28 or higher (Solutions Enabler 7.6.2.28 or higher)
+*	Required version: EMC SMI-S Provider 4.6.2.9 or higher (Solutions Enabler 7.6.2.9 or higher)
 *	SMI-S Provider is available from available from [EMC’s support website](https://support.emc.com)
 *	The SMI-S Provider with Solutions Enabler can be installed as a vApp, or on a Windows or Linux host
 
