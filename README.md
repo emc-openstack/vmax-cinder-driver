@@ -7,7 +7,8 @@ Licensed under the Apache License, Version 2.0 (the "License"); you may not use 
 
     http://www.apache.org/licenses/LICENSE-2.0
 
-* The driver in the master branch supports Kilo and Juno.
+* The driver in the master branch supports Kilo.
+* For the driver that supports Juno, go to the juno branch.
 * For the driver that supports Icehouse and Havana, go to the havana_icehouse branch.
 
 # VMAX Driver (FC and iSCSI)
@@ -26,10 +27,13 @@ EMC Cinder drivers also require PyWBEM, a client library written in Python that 
 
 ## OpenStack Release Support
 
-This driver package supports the Juno and Kilo releases. Compared to previously released versions, enhancements include:
-*	Support for consistency groups.
-*	Support for live migration.
-*	Use lookup service in FC auto zoning. 
+This driver package supports the Juno release. Compared to previously released versions, enhancements include:
+*	Support for multiple VMAX arrays
+*	Support for per-array ECOM servers
+*	FAST automated storage tiering policy support
+*	Dynamic masking view creation (FC and iSCSI)
+*	Striped volume creation
+*	Storage-Assisted Volume Migration
 
 ## Supported Operations
 
@@ -45,10 +49,6 @@ The following operations are supported on VMAX arrays:
 *	Create cloned volume
 *	Copy image to volume
 *	Copy volume to image
-*	Create consistency group
-*	Delete consistency group
-*	Create Cgsnapshot (snapshot of a consistency group)
-*	Delete Cgsnapshot
 
 ## Required Software Packages
 
@@ -204,5 +204,14 @@ Below is an example of how to create striped volumes. First, create a volume typ
         # cinder type-create GoldStriped
         # cinder type-key GoldStriped set volume_backend_name=GOLD_BACKEND
         # cinder type-key GoldStriped set storagetype:stripecount=4
+        
+## Patch information
+This is a patch of the stable/juno branch which is downloaded from Openstack. The issues fixed are:
+
+*	US8716: If there is no SMI-S container for the initiator(WWPN or IQN) we create one.
+*	US7953:	If the short host name and/or the pool name is over a certain length then the storage group, initiator group and masking view can exceed the 64 character limit that is allowed by SMI-S and the SYMAPI.
+*	US8696:	Terminate migrate session - check if the session is already terminated.
+
+
 
 
