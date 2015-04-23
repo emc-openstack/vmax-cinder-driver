@@ -31,10 +31,9 @@ class EMCVMAXFCDriver(driver.FibreChannelDriver):
         1.1.0 - Multiple pools and thick/thin provisioning,
                 performance enhancement.
         2.0.0 - Add driver requirement functions
-        2.1.0 - Add consistency group functions
     """
 
-    VERSION = "2.1.0"
+    VERSION = "2.0.0"
 
     def __init__(self, *args, **kwargs):
 
@@ -163,8 +162,8 @@ class EMCVMAXFCDriver(driver.FibreChannelDriver):
                          'target_wwn': target_wwns,
                          'initiator_target_map': init_targ_map}}
 
-        LOG.debug("Return FC data for zone addition: %(data)s.",
-                  {'data': data})
+        LOG.debug("Return FC data for zone addition: %(data)s."
+                  % {'data': data})
 
         return data
 
@@ -180,47 +179,43 @@ class EMCVMAXFCDriver(driver.FibreChannelDriver):
         :returns: data - the target_wwns and initiator_target_map if the
                          zone is to be removed, otherwise empty
         """
-        data = {}
         loc = volume['provider_location']
         name = eval(loc)
         storage_system = name['keybindings']['SystemName']
-        LOG.debug("Start FC detach process for volume: %(volume)s",
-                  {'volume': volume['name']})
+        LOG.info("Start FC detach process for volume: %(volume)s"
+                 % {'volume': volume['name']})
 
         target_wwns, init_targ_map = self._build_initiator_target_map(
             storage_system, volume, connector)
 
-        mvInstanceName = self.common.get_masking_view_by_volume(
-            volume, connector)
-        if mvInstanceName is not None:
-            portGroupInstanceName = (
-                self.common.get_port_group_from_masking_view(
-                    mvInstanceName))
+        mvInstanceName = self.common.get_masking_view_by_volume(volume)
+        portGroupInstanceName = self.common.get_port_group_from_masking_view(
+            mvInstanceName)
 
-            LOG.debug("Found port group: %(portGroup)s "
-                      "in masking view %(maskingView)s",
-                      {'portGroup': portGroupInstanceName,
-                       'maskingView': mvInstanceName})
+        LOG.info("Found port group: %(portGroup)s "
+                 "in masking view %(maskingView)s"
+                 % {'portGroup': portGroupInstanceName,
+                    'maskingView': mvInstanceName})
 
-            self.common.terminate_connection(volume, connector)
+        self.common.terminate_connection(volume, connector)
 
-            LOG.debug("Looking for masking views still associated with"
-                      "Port Group %s", portGroupInstanceName)
-            mvInstances = self.common.get_masking_views_by_port_group(
-                portGroupInstanceName)
-            if len(mvInstances) > 0:
-                LOG.debug("Found %(numViews)lu MaskingViews.",
-                          {'numViews': len(mvInstances)})
-                data = {'driver_volume_type': 'fibre_channel',
-                        'data': {}}
-            else:  # no views found
-                LOG.debug("No MaskingViews were found. Deleting zone.")
-                data = {'driver_volume_type': 'fibre_channel',
-                        'data': {'target_wwn': target_wwns,
-                                 'initiator_target_map': init_targ_map}}
+        LOG.info("Looking for masking views still associated with"
+                 "Port Group %s" % portGroupInstanceName)
+        mvInstances = self.common.get_masking_views_by_port_group(
+            portGroupInstanceName)
+        if len(mvInstances) > 0:
+            LOG.debug("Found %(numViews)lu maskingviews."
+                      % {'numViews': len(mvInstances)})
+            data = {'driver_volume_type': 'fibre_channel',
+                    'data': {}}
+        else:  # no views found
+            LOG.debug("No Masking Views were found. Deleting zone.")
+            data = {'driver_volume_type': 'fibre_channel',
+                    'data': {'target_wwn': target_wwns,
+                             'initiator_target_map': init_targ_map}}
 
-            LOG.debug("Return FC data for zone removal: %(data)s.",
-                      {'data': data})
+        LOG.debug("Return FC data for zone removal: %(data)s."
+                  % {'data': data})
 
         return data
 
@@ -228,6 +223,7 @@ class EMCVMAXFCDriver(driver.FibreChannelDriver):
         """Build the target_wwns and the initiator target map."""
         target_wwns = []
         init_targ_map = {}
+
         initiator_wwns = connector['wwpns']
 
         if self.zonemanager_lookup_service:
@@ -297,21 +293,3 @@ class EMCVMAXFCDriver(driver.FibreChannelDriver):
         "returns: list
         """
         return self.common.retype(ctxt, volume, new_type, diff, host)
-
-    def create_consistencygroup(self, context, group):
-        """Creates a consistencygroup."""
-        self.common.create_consistencygroup(context, group)
-
-    def delete_consistencygroup(self, context, group):
-        """Deletes a consistency group."""
-        volumes = self.db.volume_get_all_by_group(context, group['id'])
-        return self.common.delete_consistencygroup(
-            context, group, volumes)
-
-    def create_cgsnapshot(self, context, cgsnapshot):
-        """Creates a cgsnapshot."""
-        return self.common.create_cgsnapshot(context, cgsnapshot, self.db)
-
-    def delete_cgsnapshot(self, context, cgsnapshot):
-        """Deletes a cgsnapshot."""
-        return self.common.delete_cgsnapshot(context, cgsnapshot, self.db)
