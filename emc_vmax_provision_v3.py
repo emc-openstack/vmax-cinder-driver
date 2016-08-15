@@ -1,4 +1,4 @@
-# Copyright (c) 2012 - 2014 EMC Corporation.
+# Copyright (c) 2012 - 2015 EMC Corporation.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,9 +15,11 @@
 
 import time
 
+from oslo_log import log as logging
+import six
+
 from cinder import exception
-from cinder.i18n import _, _LE
-from cinder.openstack.common import log as logging
+from cinder.i18n import _, _LE, _LW
 from cinder.volume.drivers.emc import emc_vmax_utils
 
 LOG = logging.getLogger(__name__)
@@ -28,6 +30,7 @@ POSTGROUPTYPE = 3
 EMC_ROOT = 'root/emc'
 THINPROVISIONINGCOMPOSITE = 32768
 THINPROVISIONING = 5
+INFO_SRC_V3 = 3
 
 
 class EMCVMAXProvisionV3(object):
@@ -41,15 +44,17 @@ class EMCVMAXProvisionV3(object):
         self.utils = emc_vmax_utils.EMCVMAXUtils(prtcl)
 
     def delete_volume_from_pool(
-            self, conn, storageConfigservice, volumeInstanceName, volumeName):
+            self, conn, storageConfigservice, volumeInstanceName, volumeName,
+            extraSpecs):
         """Given the volume instance remove it from the pool.
 
         :param conn: connection the the ecom server
         :param storageConfigservice: volume created from job
         :param volumeInstanceName: the volume instance name
         :param volumeName: the volume name (String)
-        :param
-        :param rc: return code
+        :param extraSpecs: additional info
+        :returns: int -- return code
+        :raises: VolumeBackendAPIException
         """
         startTime = time.time()
 
@@ -63,12 +68,13 @@ class EMCVMAXProvisionV3(object):
             'ReturnElementsToStoragePool', storageConfigservice,
             TheElements=theElements)
 
-        if rc != 0L:
-            rc, errordesc = self.utils.wait_for_job_complete(conn, job)
-            if rc != 0L:
+        if rc != 0:
+            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                             extraSpecs)
+            if rc != 0:
                 exceptionMessage = (_(
-                    "Error Delete Volume: %(volumeName)s.  "
-                    "Return code: %(rc)lu.  Error: %(error)s")
+                    "Error Delete Volume: %(volumeName)s. "
+                    "Return code: %(rc)lu.  Error: %(error)s.")
                     % {'volumeName': volumeName,
                        'rc': rc,
                        'error': errordesc})
@@ -77,7 +83,7 @@ class EMCVMAXProvisionV3(object):
                     data=exceptionMessage)
 
         LOG.debug("InvokeMethod ReturnElementsToStoragePool took: "
-                  "%(delta)s H:MM:SS",
+                  "%(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
 
@@ -85,8 +91,8 @@ class EMCVMAXProvisionV3(object):
 
     def create_volume_from_sg(
             self, conn, storageConfigService, volumeName,
-            sgInstanceName, volumeSize):
-        """Create the volume and associate it with a storage group
+            sgInstanceName, volumeSize, extraSpecs):
+        """Create the volume and associate it with a storage group.
 
         We use EMCCollections parameter to supply a Device Masking Group
         to contain a newly created storage volume.
@@ -95,9 +101,12 @@ class EMCVMAXProvisionV3(object):
         :param storageConfigService: the storage configuration service
         :param volumeName: the volume name (String)
         :param sgInstanceName: the storage group instance name
-                                associated with an SLO
+            associated with an SLO
         :param volumeSize: volume size (String)
-        :returns: volumeDict - the volume dict
+        :param extraSpecs: additional info
+        :returns: dict -- volumeDict - the volume dict
+        :returns: int -- return code
+        :raises: VolumeBackendAPIException
         """
         startTime = time.time()
 
@@ -108,16 +117,17 @@ class EMCVMAXProvisionV3(object):
             ElementType=self.utils.get_num(THINPROVISIONING, '16'),
             Size=self.utils.get_num(volumeSize, '64'))
 
-        LOG.debug("Create Volume: %(volumename)s  Return code: %(rc)lu",
+        LOG.debug("Create Volume: %(volumename)s. Return code: %(rc)lu.",
                   {'volumename': volumeName,
                    'rc': rc})
 
-        if rc != 0L:
-            rc, errordesc = self.utils.wait_for_job_complete(conn, job)
-            if rc != 0L:
+        if rc != 0:
+            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                             extraSpecs)
+            if rc != 0:
                 exceptionMessage = (_(
-                    "Error Create Volume: %(volumeName)s.  "
-                    "Return code: %(rc)lu.  Error: %(error)s")
+                    "Error Create Volume: %(volumeName)s. "
+                    "Return code: %(rc)lu.  Error: %(error)s.")
                     % {'volumeName': volumeName,
                        'rc': rc,
                        'error': errordesc})
@@ -126,11 +136,11 @@ class EMCVMAXProvisionV3(object):
                     data=exceptionMessage)
 
         LOG.debug("InvokeMethod CreateOrModifyElementFromStoragePool "
-                  "took: %(delta)s H:MM:SS",
+                  "took: %(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
 
-        # Find the newly created volume
+        # Find the newly created volume.
         volumeDict = self.get_volume_dict_from_job(conn, job['Job'])
         return volumeDict, rc
 
@@ -138,10 +148,10 @@ class EMCVMAXProvisionV3(object):
             self, conn, maskingGroupDict, storageGroupName):
         """After creating an new storage group find it and return it.
 
-        :param conn: connection the ecom server
+        :param conn: connection to the ecom server
         :param maskingGroupDict: the maskingGroupDict dict
         :param storageGroupName: storage group name (String)
-        :returns: maskingGroupDict['MaskingGroup']
+        :returns: maskingGroupDict['MaskingGroup'] or None
         """
         foundStorageGroupInstanceName = None
         if 'MaskingGroup' in maskingGroupDict:
@@ -154,7 +164,7 @@ class EMCVMAXProvisionV3(object):
 
         :param conn: the ecom connection
         :param jobInstance: the instance of a job
-        :returns: volumeDict - an instance of a volume
+        :returns: dict -- volumeDict - an instance of a volume
         """
         associators = conn.Associators(
             jobInstance,
@@ -173,23 +183,26 @@ class EMCVMAXProvisionV3(object):
 
     def create_element_replica(
             self, conn, repServiceInstanceName,
-            cloneName, syncType, sourceInstance, targetInstance=None):
-        """Make SMI-S call to create replica for source element
+            cloneName, syncType, sourceInstance, extraSpecs,
+            targetInstance=None):
+        """Make SMI-S call to create replica for source element.
 
-        :param conn - the connection to the ecom server
-        :param repServiceInstanceName - replication service
-        :param cloneName - clone volume name
-        :param syncType - 7: snapshot, 8: clone
-        :param sourceInstance - source volume instance
-        :param targetInstance - target volume instance
-        :returns: rc - return code
+        :param conn: the connection to the ecom server
+        :param repServiceInstanceName: replication service
+        :param cloneName: clone volume name
+        :param syncType: 7=snapshot, 8=clone
+        :param sourceInstance: source volume instance
+        :param extraSpecs: additional info
+        :param targetInstance: target volume instance. Defaults to None
+        :returns: int -- rc - return code
         :returns: job - job object of the replica creation operation
+        :raises: VolumeBackendAPIException
         """
         startTime = time.time()
 
         if targetInstance is None:
             LOG.debug("Create targetless replica: %(clone)s "
-                      "syncType: %(syncType)s  Source: %(source)s",
+                      "syncType: %(syncType)s  Source: %(source)s.",
                       {'clone': cloneName,
                        'syncType': syncType,
                        'source': sourceInstance.path})
@@ -200,7 +213,7 @@ class EMCVMAXProvisionV3(object):
         else:
             LOG.debug(
                 "Create replica: %(clone)s syncType: %(syncType)s "
-                "Source: %(source)s target: %(target)s",
+                "Source: %(source)s target: %(target)s.",
                 {'clone': cloneName,
                  'syncType': syncType,
                  'source': sourceInstance.path,
@@ -211,12 +224,13 @@ class EMCVMAXProvisionV3(object):
                 SourceElement=sourceInstance.path,
                 TargetElement=targetInstance.path)
 
-        if rc != 0L:
-            rc, errordesc = self.utils.wait_for_job_complete(conn, job)
-            if rc != 0L:
+        if rc != 0:
+            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                             extraSpecs)
+            if rc != 0:
                 exceptionMessage = (_(
-                    "Error Create Cloned Volume: %(cloneName)s  "
-                    "Return code: %(rc)lu. Error: %(error)s")
+                    "Error Create Cloned Volume: %(cloneName)s "
+                    "Return code: %(rc)lu. Error: %(error)s.")
                     % {'cloneName': cloneName,
                        'rc': rc,
                        'error': errordesc})
@@ -225,38 +239,39 @@ class EMCVMAXProvisionV3(object):
                     data=exceptionMessage)
 
         LOG.debug("InvokeMethod CreateElementReplica "
-                  "took: %(delta)s H:MM:SS",
+                  "took: %(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
         return rc, job
 
     def break_replication_relationship(
             self, conn, repServiceInstanceName, syncInstanceName,
-            operation, force=False):
+            operation, extraSpecs, force=False):
         """Deletes the relationship between the clone/snap and source volume.
 
         Makes an SMI-S call to break clone relationship between the clone
-        volume and the source
+        volume and the source.
 
         :param conn: the connection to the ecom server
         :param repServiceInstanceName: instance name of the replication service
         :param syncInstanceName: instance name of the
-                                 SE_StorageSynchronized_SV_SV object
-        :param cloneName: replica name
-        :param sourceName: source volume name
-        :param sourceInstance: source volume instance
+            SE_StorageSynchronized_SV_SV object
+        :param operation: operation code
+        :param extraSpecs: additional info
+        :param force: force to break replication relationship if True
         :returns: rc - return code
         :returns: job - job object of the replica creation operation
         """
-        LOG.debug("Break replication relationship: %(sv)s  "
-                  "operation: %(operation)s",
+        LOG.debug("Break replication relationship: %(sv)s "
+                  "operation: %(operation)s.",
                   {'sv': syncInstanceName, 'operation': operation})
 
         return self._modify_replica_synchronization(
-            conn, repServiceInstanceName, syncInstanceName, operation, force)
+            conn, repServiceInstanceName, syncInstanceName, operation,
+            extraSpecs, force)
 
     def create_storage_group_v3(self, conn, controllerConfigService,
-                                groupName, srp, slo, workload):
+                                groupName, srp, slo, workload, extraSpecs):
         """Create the volume in the specified pool.
 
         :param conn: the connection information to the ecom server
@@ -265,8 +280,8 @@ class EMCVMAXProvisionV3(object):
         :param srp: the SRP (String)
         :param slo: the SLO (String)
         :param workload: the workload (String)
-        :returns: volumeDict - the volume dict
-
+        :param extraSpecs: additional info
+        :returns: storageGroupInstanceName - storage group instance name
         """
         startTime = time.time()
 
@@ -279,20 +294,20 @@ class EMCVMAXProvisionV3(object):
             EMCSLO=slo,
             EMCWorkload=workload)
 
-        if rc != 0L:
-            rc, errordesc = rc, errordesc = self.utils.wait_for_job_complete(
-                conn, job)
-            if rc != 0L:
+        if rc != 0:
+            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                             extraSpecs)
+            if rc != 0:
                 LOG.error(_LE(
-                    'Error Create Group: %(groupName)s.  '
-                    'Return code: %(rc)lu.  Error: %(error)s'),
+                    "Error Create Group: %(groupName)s. "
+                    "Return code: %(rc)lu.  Error: %(error)s."),
                     {'groupName': groupName,
                      'rc': rc,
                      'error': errordesc})
                 raise
 
         LOG.debug("InvokeMethod CreateGroup "
-                  "took: %(delta)s H:MM:SS",
+                  "took: %(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
 
@@ -302,11 +317,11 @@ class EMCVMAXProvisionV3(object):
         return foundStorageGroupInstanceName
 
     def _get_storage_pool_capability(self, conn, poolInstanceName):
-        """get the pool capability.
+        """Get the pool capability.
 
         :param conn: the connection information to the ecom server
         :param poolInstanceName: the pool instance
-        :returns: storagePoolCapability - the storage pool capability instance
+        :returns: the storage pool capability instance. None if not found
         """
         storagePoolCapability = None
 
@@ -321,13 +336,13 @@ class EMCVMAXProvisionV3(object):
 
     def _get_storage_pool_setting(
             self, conn, storagePoolCapability, slo, workload):
-        """get the pool setting for pool capability.
+        """Get the pool setting for pool capability.
 
         :param conn: the connection information to the ecom server
         :param storagePoolCapability: the storage pool capability instance
         :param slo: the slo string e.g Bronze
         :param workload: the workload string e.g DSS_REP
-        :returns: foundStoragePoolSetting - the storage pool setting instance
+        :returns: the storage pool setting instance
         """
 
         foundStoragePoolSetting = None
@@ -337,25 +352,26 @@ class EMCVMAXProvisionV3(object):
 
         for storagePoolSetting in storagePoolSettings:
             settingInstanceID = storagePoolSetting['InstanceID']
-            matchString = slo + ':' + workload
+            matchString = ("%(slo)s:%(workload)s"
+                           % {'slo': slo,
+                              'workload': workload})
             if matchString in settingInstanceID:
                 foundStoragePoolSetting = storagePoolSetting
                 break
         return foundStoragePoolSetting
 
-    # New
-    # GetSupportedSizes, GetSupportedSizeRange updated to return
-    # SLO headroom information.
     def _get_supported_size_range_for_SLO(
             self, conn, storageConfigService,
-            srpPoolInstanceName, storagePoolSettingInstanceName):
+            srpPoolInstanceName, storagePoolSettingInstanceName, extraSpecs):
         """Gets available performance capacity per SLO.
 
         :param conn: the connection information to the ecom server
+        :param storageConfigService: the storage configuration service instance
         :param srpPoolInstanceName: the SRP storage pool instance
-        :param storagePoolSettingInstanceName: the SLO type
-                                e.g Bronze
-        :returns: volumeDict - the volume dict
+        :param storagePoolSettingInstanceName: the SLO type, e.g Bronze
+        :param extraSpecs: additional info
+        :returns: dict -- supportedSizeDict - the supported size dict
+        :raises: VolumeBackendAPIException
         """
         startTime = time.time()
 
@@ -365,13 +381,13 @@ class EMCVMAXProvisionV3(object):
             ElementType=self.utils.get_num(3, '16'),
             Goal=storagePoolSettingInstanceName)
 
-        if rc != 0L:
+        if rc != 0:
             rc, errordesc = self.utils.wait_for_job_complete(
-                conn, supportedSizeDict)
-            if rc != 0L:
+                conn, supportedSizeDict, extraSpecs)
+            if rc != 0:
                 exceptionMessage = (_(
                     "Cannot get supported size range for %(sps)s "
-                    "Return code: %(rc)lu.  Error: %(error)s")
+                    "Return code: %(rc)lu. Error: %(error)s.")
                     % {'sps': storagePoolSettingInstanceName,
                        'rc': rc,
                        'error': errordesc})
@@ -380,27 +396,26 @@ class EMCVMAXProvisionV3(object):
                     data=exceptionMessage)
 
         LOG.debug("InvokeMethod GetSupportedSizeRange "
-                  "took: %(delta)s H:MM:SS",
+                  "took: %(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
 
         return supportedSizeDict
 
     def get_volume_range(
-            self, conn, storageConfigService, poolInstanceName, slo, workload):
-        """get upper and lower range for volume for slo/workload combination
+            self, conn, storageConfigService, poolInstanceName, slo, workload,
+            extraSpecs):
+        """Get upper and lower range for volume for slo/workload combination.
 
         :param conn: the connection information to the ecom server
         :param storageConfigService: the storage config service
         :param poolInstanceName: the pool instance
-        :param volumeSize: volume size (bits)
         :param slo: slo string e.g Bronze
         :param workload: workload string e.g DSS
-        :returns: storagePoolCapability - the storage pool capability instance
+        :param extraSpecs: additional info
+        :returns: supportedSizeDict
         """
-        maximumVolumeSize = None
-        minimumVolumeSize = None
-
+        supportedSizeDict = {}
         storagePoolCapabilityInstanceName = self._get_storage_pool_capability(
             conn, poolInstanceName)
         if storagePoolCapabilityInstanceName:
@@ -409,71 +424,71 @@ class EMCVMAXProvisionV3(object):
             if storagePoolCapabilityInstanceName:
                 supportedSizeDict = self._get_supported_size_range_for_SLO(
                     conn, storageConfigService, poolInstanceName,
-                    storagePoolSettingInstanceName)
-
-                maximumVolumeSize = supportedSizeDict['MaximumVolumeSize']
-                minimumVolumeSize = supportedSizeDict['MinimumVolumeSize']
-
-        return maximumVolumeSize, minimumVolumeSize
+                    storagePoolSettingInstanceName, extraSpecs)
+        return supportedSizeDict
 
     def activate_snap_relationship(
-            self, conn, repServiceInstanceName, syncInstanceName):
+            self, conn, repServiceInstanceName, syncInstanceName, extraSpecs):
         """Activate snap relationship and start copy operation.
 
         :param conn: the connection to the ecom server
         :param repServiceInstanceName: instance name of the replication service
         :param syncInstanceName: instance name of the
-                                 SE_StorageSynchronized_SV_SV object
-        :returns: rc - return code
-        :returns: job - job object of the replica creation operation
+            SE_StorageSynchronized_SV_SV object
+        :param extraSpecs: additional info
+        :returns: int -- return code
+        :returns: job object of the replica creation operation
         """
-        # operation 4: activate the snapVx
+        # Operation 4: activate the snapVx.
         operation = self.utils.get_num(4, '16')
 
-        LOG.debug("Activate snap: %(sv)s  operation: %(operation)s ",
+        LOG.debug("Activate snap: %(sv)s  operation: %(operation)s.",
                   {'sv': syncInstanceName, 'operation': operation})
 
         return self._modify_replica_synchronization(
-            conn, repServiceInstanceName, syncInstanceName, operation)
+            conn, repServiceInstanceName, syncInstanceName, operation,
+            extraSpecs)
 
     def return_to_resource_pool(self, conn, repServiceInstanceName,
-                                syncInstanceName):
-        """return the snap target resources back to the pool
+                                syncInstanceName, extraSpecs):
+        """Return the snap target resources back to the pool.
 
         :param conn: the connection to the ecom server
         :param repServiceInstanceName: instance name of the replication service
         :param syncInstanceName: instance name of the
+        :param extraSpecs: additional info
         :returns: rc - return code
-        :returns: job - job object of the replica creation operation
+        :returns: job object of the replica creation operation
         """
-        # operation 4: activate the snapVx
+        # Operation 4: activate the snapVx.
         operation = self.utils.get_num(19, '16')
 
         LOG.debug("Return snap resource back to pool: "
-                  "%(sv)s  operation: %(operation)s ",
+                  "%(sv)s  operation: %(operation)s.",
                   {'sv': syncInstanceName, 'operation': operation})
 
         return self._modify_replica_synchronization(
-            conn, repServiceInstanceName, syncInstanceName, operation)
+            conn, repServiceInstanceName, syncInstanceName, operation,
+            extraSpecs)
 
     def _modify_replica_synchronization(
             self, conn, repServiceInstanceName, syncInstanceName,
-            operation, force=False):
-        """Helper function to modify the relationship between the clone/snap
-        and source volume.
+            operation, extraSpecs, force=False):
+        """Modify the relationship between the clone/snap and source volume.
 
-        Makes an SMI-S call to break clone relationship between the clone
-        volume and the source
+        Helper function that makes an SMI-S call to break clone relationship
+        between the clone volume and the source.
 
         :param conn: the connection to the ecom server
         :param repServiceInstanceName: instance name of the replication service
         :param syncInstanceName: instance name of the
-                                 SE_StorageSynchronized_SV_SV object
-        :param cloneName: replica name
-        :param sourceName: source volume name
-        :param sourceInstance: source volume instance
-        :returns: rc - return code
-        :returns: job - job object of the replica creation operation
+            SE_StorageSynchronized_SV_SV object
+        :param operation: operation code
+        :param extraSpecs: additional info
+        :param force: force to modify replication synchronization if True
+        :returns: int -- return code
+        :returns: job object of the replica creation operation
+        :raises: VolumeBackendAPIException
         """
         startTime = time.time()
 
@@ -483,17 +498,18 @@ class EMCVMAXProvisionV3(object):
             Synchronization=syncInstanceName,
             Force=force)
 
-        LOG.debug("_modify_replica_synchronization: %(sv)s  "
-                  "operation: %(operation)s  Return code: %(rc)lu",
+        LOG.debug("_modify_replica_synchronization: %(sv)s "
+                  "operation: %(operation)s  Return code: %(rc)lu.",
                   {'sv': syncInstanceName, 'operation': operation, 'rc': rc})
 
-        if rc != 0L:
-            rc, errordesc = self.utils.wait_for_job_complete(conn, job)
-            if rc != 0L:
+        if rc != 0:
+            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                             extraSpecs)
+            if rc != 0:
                 exceptionMessage = (_(
-                    "Error modify replica synchronization: %(sv)s  "
-                    "operation: %(operation)s.  "
-                    "Return code: %(rc)lu.  Error: %(error)s")
+                    "Error modify replica synchronization: %(sv)s "
+                    "operation: %(operation)s. "
+                    "Return code: %(rc)lu.  Error: %(error)s.")
                     % {'sv': syncInstanceName, 'operation': operation,
                        'rc': rc, 'error': errordesc})
                 LOG.error(exceptionMessage)
@@ -501,7 +517,7 @@ class EMCVMAXProvisionV3(object):
                     data=exceptionMessage)
 
         LOG.debug("InvokeMethod ModifyReplicaSynchronization "
-                  "took: %(delta)s H:MM:SS",
+                  "took: %(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
 
@@ -509,29 +525,31 @@ class EMCVMAXProvisionV3(object):
 
     def create_group_replica(
             self, conn, replicationService,
-            srcGroupInstanceName, tgtGroupInstanceName, relationName):
-        """Make SMI-S call to create replica for source group
+            srcGroupInstanceName, tgtGroupInstanceName, relationName,
+            extraSpecs):
+        """Make SMI-S call to create replica for source group.
 
-        :param conn - the connection to the ecom server
-        :param repServiceInstanceName - replication service
-        :param srcGroupInstanceName - source group instance name
-        :param tgtGroupInstanceName - target group instance name
-        :param cgName - target group name
-
-        :returns: rc - return code
-        :returns: job - job object of the replica creation operation
+        :param conn: the connection to the ecom server
+        :param replicationService: replication service
+        :param srcGroupInstanceName: source group instance name
+        :param tgtGroupInstanceName: target group instance name
+        :param relationName: replica relationship name
+        :param extraSpecs: additional info
+        :returns: int -- return code
+        :returns: job object of the replica creation operation
+        :raises: VolumeBackendAPIException
         """
         LOG.debug(
             "Creating CreateGroupReplica V3: "
             "replicationService: %(replicationService)s  "
             "RelationName: %(relationName)s "
             "sourceGroup: %(srcGroup)s "
-            "targetGroup: %(tgtGroup)s ",
+            "targetGroup: %(tgtGroup)s.",
             {'replicationService': replicationService,
              'relationName': relationName,
              'srcGroup': srcGroupInstanceName,
              'tgtGroup': tgtGroupInstanceName})
-        # 7 for snap
+        # 7 for snap.
         syncType = 7
         rc, job = conn.InvokeMethod(
             'CreateGroupReplica',
@@ -541,12 +559,13 @@ class EMCVMAXProvisionV3(object):
             TargetGroup=tgtGroupInstanceName,
             SyncType=self.utils.get_num(syncType, '16'))
 
-        if rc != 0L:
-            rc, errordesc = self.utils.wait_for_job_complete(conn, job)
-            if rc != 0L:
+        if rc != 0:
+            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                             extraSpecs)
+            if rc != 0:
                 exceptionMsg = (_("Error CreateGroupReplica: "
-                                  "source: %(source)s target: %(target)s."
-                                  "Return code: %(rc)lu. Error: %(error)s")
+                                  "source: %(source)s target: %(target)s. "
+                                  "Return code: %(rc)lu. Error: %(error)s.")
                                 % {'source': srcGroupInstanceName,
                                    'target': tgtGroupInstanceName,
                                    'rc': rc,
@@ -554,3 +573,111 @@ class EMCVMAXProvisionV3(object):
                 LOG.error(exceptionMsg)
                 raise exception.VolumeBackendAPIException(data=exceptionMsg)
         return rc, job
+
+    def get_srp_pool_stats(self, conn, arrayInfo):
+        """Get the totalManagedSpace, remainingManagedSpace.
+
+        :param conn: the connection to the ecom server
+        :param arrayInfo: the array dict
+        :returns: totalCapacityGb
+        :returns: remainingCapacityGb
+        :returns: subscribedCapacityGb
+        :returns: array_reserve_percent
+        """
+        totalCapacityGb = -1
+        remainingCapacityGb = -1
+        subscribedCapacityGb = -1
+        array_reserve_percent = -1
+        storageSystemInstanceName = self.utils.find_storageSystem(
+            conn, arrayInfo['SerialNumber'])
+
+        srpPoolInstanceNames = conn.AssociatorNames(
+            storageSystemInstanceName,
+            ResultClass='Symm_SRPStoragePool')
+
+        for srpPoolInstanceName in srpPoolInstanceNames:
+            poolnameStr = self.utils.get_pool_name(conn, srpPoolInstanceName)
+
+            if six.text_type(arrayInfo['PoolName']) == (
+                    six.text_type(poolnameStr)):
+                try:
+                    # Check that pool hasn't suddently been deleted.
+                    srpPoolInstance = conn.GetInstance(srpPoolInstanceName)
+                    propertiesList = srpPoolInstance.properties.items()
+                    for properties in propertiesList:
+                        if properties[0] == 'TotalManagedSpace':
+                            cimProperties = properties[1]
+                            totalManagedSpace = cimProperties.value
+                            totalCapacityGb = self.utils.convert_bits_to_gbs(
+                                totalManagedSpace)
+                        elif properties[0] == 'RemainingManagedSpace':
+                            cimProperties = properties[1]
+                            remainingManagedSpace = cimProperties.value
+                            remainingCapacityGb = (
+                                self.utils.convert_bits_to_gbs(
+                                    remainingManagedSpace))
+                        elif properties[0] == 'EMCSubscribedCapacity':
+                            cimProperties = properties[1]
+                            subscribedManagedSpace = cimProperties.value
+                            subscribedCapacityGb = (
+                                self.utils.convert_bits_to_gbs(
+                                    subscribedManagedSpace))
+                        elif properties[0] == 'EMCPercentReservedCapacity':
+                            cimProperties = properties[1]
+                            array_reserve_percent = int(cimProperties.value)
+                except Exception:
+                    pass
+                remainingSLOCapacityGb = (
+                    self._get_remaining_slo_capacity_wlp(
+                        conn, srpPoolInstanceName, arrayInfo,
+                        storageSystemInstanceName['Name']))
+                if remainingSLOCapacityGb != -1:
+                    remainingCapacityGb = remainingSLOCapacityGb
+                else:
+                    LOG.warning(_LW(
+                        "Remaining capacity %(remainingCapacityGb)s "
+                        "GBs is determined from SRP pool capacity "
+                        "and not the SLO capacity. Performance may "
+                        "not be what you expect."),
+                        {'remainingCapacityGb': remainingCapacityGb})
+
+        return (totalCapacityGb, remainingCapacityGb, subscribedCapacityGb,
+                array_reserve_percent)
+
+    def _get_remaining_slo_capacity_wlp(self, conn, srpPoolInstanceName,
+                                        arrayInfo, systemName):
+        """Get the remaining SLO capacity.
+
+        This is derived from the WLP portion of Unisphere. Please
+        see the SMIProvider doc and the readme doc for details.
+
+        :param conn: the connection to the ecom server
+        :param srpPoolInstanceName: SRP instance name
+        :param arrayInfo: the array dict
+        :param systemName: the system name
+        :returns: remainingCapacityGb
+        """
+        remainingCapacityGb = -1
+        storageConfigService = (
+            self.utils.find_storage_configuration_service(
+                conn, systemName))
+
+        supportedSizeDict = (
+            self.get_volume_range(
+                conn, storageConfigService, srpPoolInstanceName,
+                arrayInfo['SLO'], arrayInfo['Workload'],
+                None))
+        try:
+            # Information source is V3.
+            if supportedSizeDict['EMCInformationSource'] == INFO_SRC_V3:
+                remainingCapacityGb = self.utils.convert_bits_to_gbs(
+                    supportedSizeDict['EMCRemainingSLOCapacity'])
+                LOG.debug("Received remaining SLO Capacity "
+                          "%(remainingCapacityGb)s GBs for SLO "
+                          "%(SLO)s and workload %(workload)s.",
+                          {'remainingCapacityGb': remainingCapacityGb,
+                           'SLO': arrayInfo['SLO'],
+                           'workload': arrayInfo['Workload']})
+        except KeyError:
+            pass
+        return remainingCapacityGb
