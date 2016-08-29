@@ -1,4 +1,7 @@
 2016-08-26 
-1.  AF support
+1.  VMAX3 support on 8.1.2
 2.  Avamar support
 3.  QoS support
+4.  Oversubscription support
+5.  FAST terminology for storage groups and masking views
+6.  Getting correct iscsi ip address for port in existing MV
