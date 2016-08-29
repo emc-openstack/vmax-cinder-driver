@@ -236,10 +236,13 @@ If FAST is set and multiple pools are associated with a FAST policy, then the sa
 We treat a FAST policy as a .virtual pool., comprised of the sum of capacities of the underlying physical pools. Because those physical pools could be associated with multiple FAST policies, we create a storage group for each FAST policy in order to distinguish among them.  It is the therefore name of the FAST policy and not the name of the Pool that is used to generate unique names.  Please note:
 
 The format of the storage group name is:
+
     OS-<shortHostName>-<FastPolicyName>-FP-<Protocol>-SG
 The format of the masking view name is:
+
     OS-<shortHostName>-<FastPolicyName>-FP-<Protocol>-MV
 The FAST policy name must not exceed 14 characters, if it does we truncate it by using the first 7 and last 6 characters(like we do for pool)
+
 There is nothing preventing the use of the same name for a FAST policy and a pool.  Therefore, we append -FP to the FAST policy name to ensure uniqueness
 
 ## QoS (Quality of Service) Support
@@ -254,12 +257,14 @@ Quality of service has traditionally been associated with network bandwidth usag
 ### USE CASE 1 - DEFAULT VALUES
 
 Prerequisites - VMAX
-Host I/O Limit (MB/Sec) - 	No Limit
-Host I/O Limit (IO/Sec) - 	No Limit
-Set Dynamic Distribution -	NA
+
+* Host I/O Limit (MB/Sec) - 	No Limit
+* Host I/O Limit (IO/Sec) - 	No Limit
+* Set Dynamic Distribution -	NA
+
 Prerequisites - Cinder Backend (Storage Group)
 
-    ***Key***         ***Value***
+    Key               Value
     maxIOPS           4000
     maxMBPS           4000
     DistributionType  Always
@@ -283,9 +288,9 @@ cinder create [--name <name>]  [--volume-type <volume-type>] size
     # cinder create --name test_volume --volume-type 224b1517-4a23-44b5-9035-8d9e2c18fb70 1
 
 #### Outcome - VMAX (Storage Group)
-Host I/O Limit (MB/Sec) - 	4000
-Host I/O Limit (IO/Sec) - 	4000
-Set Dynamic Distribution -	Always
+* Host I/O Limit (MB/Sec) - 	4000
+* Host I/O Limit (IO/Sec) - 	4000
+* Set Dynamic Distribution -	Always
 
 #### Outcome - Cinder
 Volume is created against volume type and QOS is enforced with the parameters above
