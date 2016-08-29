@@ -51,8 +51,8 @@ The following operations are supported on VMAX arrays:
 
 ### Install SMI-S Provider with Solutions Enabler
 *	Required versions: 
-		EMC SMI-S Provider 4.6.2.29(Solutions Enabler 7.6.2.67) for VMAX2
-		Solutions Enabler 8.1.2 for VMAX2 and VMAX3
+**	EMC SMI-S Provider 4.6.2.29(Solutions Enabler 7.6.2.67) for VMAX2
+**	Solutions Enabler 8.1.2 for VMAX2 and VMAX3
 *	SMI-S Provider is available from available from [EMC’s support website](https://support.emc.com)
 *	The SMI-S Provider with Solutions Enabler can be installed as a vApp, or on a Windows or Linux host
 
@@ -328,7 +328,7 @@ cinder qos-associate <qos_specs id> <volume_type_id>
 Create volume with the volume type indicated above
 cinder create [--name <name>]  [--volume-type <volume-type>] size
 
-    #cinder create --name test_volume --volume-type 224b1517-4a23-44b5-9035-8d9e2c18fb70 1
+    # cinder create --name test_volume --volume-type 224b1517-4a23-44b5-9035-8d9e2c18fb70 1
 
 #### Outcome - VMAX (Storage Group)
 * Host I/O Limit (MB/Sec) -	4000
