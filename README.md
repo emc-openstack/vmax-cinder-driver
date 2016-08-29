@@ -49,10 +49,9 @@ The following operations are supported on VMAX arrays:
 
 ## Required Software Packages
 
-### Install SMI-S Provider with Solutions Enabler
-*	Required versions: 
-**	EMC SMI-S Provider 4.6.2.29(Solutions Enabler 7.6.2.67) for VMAX2
-**	Solutions Enabler 8.1.2 for VMAX2 and VMAX3
+### Install SMI-S Provider with Solutions Enabler 
+*	EMC SMI-S Provider 4.6.2.29(Solutions Enabler 7.6.2.67) for VMAX2
+*	Solutions Enabler 8.1.2(with SMI-S component) for VMAX2 and VMAX3
 *	SMI-S Provider is available from available from [EMC’s support website](https://support.emc.com)
 *	The SMI-S Provider with Solutions Enabler can be installed as a vApp, or on a Windows or Linux host
 
