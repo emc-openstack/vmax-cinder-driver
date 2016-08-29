@@ -42,9 +42,16 @@ class EMCVMAXFCDriver(driver.FibreChannelDriver):
         2.2.2 - Update Consistency Group
         2.2.3 - Pool aware scheduler(multi-pool) support
         2.2.4 - Create CG from CG snapshot
+        2.2.5 - EMC github Liberty patch 1
+              - Fixes for VMAX3
+              - Support for Avamar
+              - Oversubscription support
+              - QoS support
+              - Getting correct iscsi ip address for port in existing MV
+              - SG and MV terminology fix for FAST
     """
 
-    VERSION = "2.2.4"
+    VERSION = "2.2.5"
 
     def __init__(self, *args, **kwargs):
 
