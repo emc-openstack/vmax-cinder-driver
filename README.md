@@ -298,9 +298,11 @@ Volume is created against volume type and QOS is enforced with the parameters ab
 ###USE CASE 2 - LIMITS PRESET
 
 Prerequisites - VMAX
-Host I/O Limit (MB/Sec) - 	2000
-Host I/O Limit (IO/Sec) - 	2000
-Set Dynamic Distribution -	Never
+
+* Host I/O Limit (MB/Sec) - 	2000
+* Host I/O Limit (IO/Sec) - 	2000
+* Set Dynamic Distribution -	Never
+
 Prerequisites - Cinder Backend (Storage Group)
 
     Key               Value
@@ -327,9 +329,9 @@ cinder create [--name <name>]  [--volume-type <volume-type>] size
     #cinder create --name test_volume --volume-type 224b1517-4a23-44b5-9035-8d9e2c18fb70 1
 
 #### Outcome - VMAX (Storage Group)
-Host I/O Limit (MB/Sec) -	4000
-Host I/O Limit (IO/Sec) - 	4000
-Set Dynamic Distribution -	Always
+* Host I/O Limit (MB/Sec) -	4000
+* Host I/O Limit (IO/Sec) - 	4000
+* Set Dynamic Distribution -	Always
 
 #### Outcome - Cinder
 Volume is created against volume type and QOS is enforced with the parameters above
@@ -338,9 +340,10 @@ Volume is created against volume type and QOS is enforced with the parameters ab
 ### USE CASE 3 - LIMITS PRE-SETs
 Prerequisites - VMAX
 
-Host I/O Limit (MB/Sec) - 	No Limit
-Host I/O Limit (IO/Sec) - 	No Limit
-Set Dynamic Distribution -	NA
+* Host I/O Limit (MB/Sec) - 	No Limit
+* Host I/O Limit (IO/Sec) - 	No Limit
+* Set Dynamic Distribution -	NA
+
 Prerequisites - Cinder Backend (Storage Group)
 
     Key               Value
@@ -365,9 +368,9 @@ cinder create [--name <name>]  [--volume-type <volume-type>] size
     # cinder create --name test_volume --volume-type 224b1517-4a23-44b5-9035-8d9e2c18fb70 1
 
 #### Outcome - VMAX (Storage Group)
-Host I/O Limit (MB/Sec) - 	No Limit
-Host I/O Limit (IO/Sec) - 	No Limit
-Set Dynamic Distribution -	NA
+* Host I/O Limit (MB/Sec) - 	No Limit
+* Host I/O Limit (IO/Sec) - 	No Limit
+* Set Dynamic Distribution -	NA
 
 #### Outcome - Cinder
 Volume is created against volume type and there is no QOS change
@@ -375,9 +378,10 @@ Volume is created against volume type and there is no QOS change
 ### USE CASE 4 - LIMITS PRE-SETs
 Prerequisites - VMAX
 
-Host I/O Limit (MB/Sec) - 	No Limit
-Host I/O Limit (IO/Sec) - 	No Limit
-Set Dynamic Distribution -	NA
+* Host I/O Limit (MB/Sec) - 	No Limit
+* Host I/O Limit (IO/Sec) - 	No Limit
+* Set Dynamic Distribution -	NA
+
 Prerequisites - Cinder Backend (Storage Group)
 
     Key               Value
@@ -402,9 +406,9 @@ cinder create [--name <name>]  [--volume-type <volume-type>] size
     # cinder create --name test_volume --volume-type 224b1517-4a23-44b5-9035-8d9e2c18fb70 1
 
 #### Outcome - VMAX (Storage Group)
-Host I/O Limit (MB/Sec) - 	No Limit
-Host I/O Limit (IO/Sec) - 	No Limit
-Set Dynamic Distribution -	NA
+* Host I/O Limit (MB/Sec) - 	No Limit
+* Host I/O Limit (IO/Sec) - 	No Limit
+* Set Dynamic Distribution -	NA
 
 #### Outcome - Cinder
 Volume is created against volume type and there is no QOS change
