@@ -94,7 +94,6 @@ The EMC VMAX drivers are written to support multiple types of storage, as config
         enabled_backends=CONF_GROUP_ISCSI, CONF_GROUP_FC
 
         [CONF_GROUP_ISCSI]
-        iscsi_ip_address = 10.10.0.50
         volume_driver=cinder.volume.drivers.emc.emc_vmax_iscsi.EMCVMAXISCSIDriver
         cinder_emc_config_file=/etc/cinder/cinder_emc_config_CONF_GROUP_ISCSI.xml
         volume_backend_name=ISCSI_backend
@@ -105,8 +104,6 @@ The EMC VMAX drivers are written to support multiple types of storage, as config
         volume_backend_name=FC_backend
 
  
-NOTE: iscsi_ip_address is required in an ISCSI configuration.  This is the IP Address of the VMAX iscsi target.
-
 In this example, two backend configuration groups are enabled: CONF_GROUP_ISCSI and CONF_GROUP_FC. Each configuration group has a section describing unique parameters for connections, drivers, the volume_backend_name, and the name of the EMC-specific configuration file containing additional settings. Note that the file name is in the format /etc/cinder/cinder_emc_config_<confGroup>.xml.  See the section below for a description of the file contents.
 
 Once the cinder.conf and EMC-specific configuration files have been created, cinder commands need to be issued in order to create and associate OpenStack volume types with the declared volume_backend_names:
@@ -150,8 +147,6 @@ NOTE:  Make sure that the PortGroups set contains either all FC or all iSCSI por
 The Array tag holds the unique VMAX array serial number.
 
 The Pool tag holds the unique pool name within a given array. 
-
-NOTE: For this version of the driver, we do not support over subscription of pools. Creating a pool with max_subs_percent greater than 100 is not recommended.
 
 For backends not using FAST automated tiering, the pool is a single pool that has been created by the admin. 
 
