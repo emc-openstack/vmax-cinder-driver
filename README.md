@@ -232,4 +232,61 @@ If FAST is set and multiple pools are associated with a FAST policy, then the sa
 
 Scenario 5 . EMCMaxSubscriptionPercent is 200 on one pool.  It is 300 on another pool.  The user defined max_over_subscription_ratio is 2.5.  Oversubscription is 200% on the first pool and 250% on the other.
 
+### FAST policy
 
+We treat a FAST policy as a .virtual pool., comprised of the sum of capacities of the underlying physical pools. Because those physical pools could be associated with multiple FAST policies, we create a storage group for each FAST policy in order to distinguish among them.  It is the therefore name of the FAST policy and not the name of the Pool that is used to generate unique names.  Please note:
+
+* The format of the storage group name is:
+    OS-<shortHostName>-<FastPolicyName>-FP-<Protocol>-SG
+* The format of the masking view name is:
+    OS-<shortHostName>-<FastPolicyName>-FP-<Protocol>-MV
+* The FAST policy name must not exceed 14 characters, if it does we truncate it by using the first 7 and last 6 characters(like we do for pool)
+* There is nothing preventing the use of the same name for a FAST policy and a pool.  Therefore, we append -FP to the FAST policy name to ensure uniqueness
+
+### QoS (Quality of Service) Support
+
+Quality of service has traditionally been associated with network bandwidth usage. Network administrators set limitations on certain networks in terms of bandwidth usage for clients. This enables them provide a tiered level of service based on cost. The Cinder QOS offers similar functionality based on volume type setting limits on host storage bandwidth per service offering. Each volume type is tied to specific QOS attributes that are unique to each Storage vendor.  The VMAX3 plugin offers limits via the following attributes
+
+* By I/O limit per second (IOPS)
+* By limiting throughput per second (MB/S)
+* Dynamic Distribution
+* The VMAX3 offers modification of QOS at the Storage Group level
+
+#### USE CASE 1 - DEFAULT VALUES
+
+Prerequisites . VMAX
+Host I/O Limit (MB/Sec) . 	No Limit
+Host I/O Limit (IO/Sec) - 	No Limit
+Set Dynamic Distribution -	NA
+Prerequisites . Cinder Backend (Storage Group)
+
+    Key               Value
+    maxIOPS	      4000
+    maxMBPS	      4000
+    DistributionType  Always
+
+##### Step 1.
+Create QOS Specs with the prerequisite values above
+cinder qos-create <name> <key=value> [<key=value> ...]
+
+    >cinder qos-create silver maxIOPS=4000 maxMBPS=4000 DistributionType=Always
+
+##### Step 2.
+Associate qos specs with specified volume type
+cinder qos-associate <qos_specs id> <volume_type_id>
+
+    >cinder qos-associate 07767ad8-6170-4c71-abce-99e68702f051 224b1517-4a23-44b5-9035-8d9e2c18fb70
+
+##### Step 3.
+Create volume with the volume type indicated above
+cinder create [--name <name>]  [--volume-type <volume-type>] size
+
+    >cinder create --name test_volume --volume-type 224b1517-4a23-44b5-9035-8d9e2c18fb70 1
+
+##### Outcome - VMAX (Storage Group)
+Host I/O Limit (MB/Sec) . 	4000
+Host I/O Limit (IO/Sec) - 	4000
+Set Dynamic Distribution -	Always
+
+##### Outcome - Cinder
+Volume is created against volume type and QOS is enforced with the parameters above
