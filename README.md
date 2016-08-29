@@ -203,6 +203,7 @@ Below is an example of how to create striped volumes. First, create a volume typ
         # cinder type-key GoldStriped set storagetype:stripecount=4
 
 ## Additional support in Patch 1
+
 ### Over Subscription Support
 Over subscription support requires the /etc/cinder/cinder.conf to be updated with two additional tags max_over_subscription_ratio and/or reserved_percentage.In the sample below the value of 2.0 for max_over_subscription_ratio means that the pools in oversubscribed by a factor of 2, or 200% over subscribed.
 The reserved_percentage is the high water mark where by the physical remaining space cannot be exceeded.  For example, if there is only 4% of physical space left and the reserve percentage is 5, the free space will equate to zero.  This is a safety mechanism to prevent a scenario that a provisioning request failing due to insufficient raw space.
@@ -220,24 +221,24 @@ To set these parameter go to the configuration group of the volume type in /etc/
 
 For the second iteration of over subscription we take into account the EMCMaxSubscriptionPercent property on the pool.  This value is the highest that a pool can be oversubscribed.
 
-Scenario 1 . EMCMaxSubscriptionPercent is 200 and the user defined max_over_subscription_ratio is 2.5, the latter is ignored.   Oversubscription is 200%.
+**Scenario 1** - EMCMaxSubscriptionPercent is 200 and the user defined max_over_subscription_ratio is 2.5, the latter is ignored.   Oversubscription is 200%.
 
-Scenario 2 - EMCMaxSubscriptionPercent is 200 and the user defined max_over_subscription_ratio is 1.5, 1.5 equates to 150% and is less than the value set on the pool.  Oversubscription is 150%
+**Scenario 2** - EMCMaxSubscriptionPercent is 200 and the user defined max_over_subscription_ratio is 1.5, 1.5 equates to 150% and is less than the value set on the pool.  Oversubscription is 150%
 
-Scenario 3 - EMCMaxSubscriptionPercent is 0.  This means there is no upper limit on the pool.  The user defined max_over_subscription_ratio is 1.5.  Oversubscription is 150%
+**Scenario 3** - EMCMaxSubscriptionPercent is 0.  This means there is no upper limit on the pool.  The user defined max_over_subscription_ratio is 1.5.  Oversubscription is 150%
 
-Scenario 4 - EMCMaxSubscriptionPercent is 0.  max_over_subscription_ratio is not set by the user.  We default to a hardcoded upper limit which is 150%
+**Scenario 4** - EMCMaxSubscriptionPercent is 0.  max_over_subscription_ratio is not set by the user.  We default to a hardcoded upper limit which is 150%
 
 If FAST is set and multiple pools are associated with a FAST policy, then the same rules apply.  The difference is, the TotalManagedSpace and EMCSubscribedCapacity for each pool associated with the FAST policy are aggregated.
 
-Scenario 5 . EMCMaxSubscriptionPercent is 200 on one pool.  It is 300 on another pool.  The user defined max_over_subscription_ratio is 2.5.  Oversubscription is 200% on the first pool and 250% on the other.
+**Scenario 5** - EMCMaxSubscriptionPercent is 200 on one pool.  It is 300 on another pool.  The user defined max_over_subscription_ratio is 2.5.  Oversubscription is 200% on the first pool and 250% on the other.
 
 ### FAST policy
 
 We treat a FAST policy as a .virtual pool., comprised of the sum of capacities of the underlying physical pools. Because those physical pools could be associated with multiple FAST policies, we create a storage group for each FAST policy in order to distinguish among them.  It is the therefore name of the FAST policy and not the name of the Pool that is used to generate unique names.  Please note:
 
 * The format of the storage group name is:
-    'OS-<shortHostName>-<FastPolicyName>-FP-<Protocol>-SG'
+    '''OS-<shortHostName>-<FastPolicyName>-FP-<Protocol>-SG'''
 * The format of the masking view name is:
     'OS-<shortHostName>-<FastPolicyName>-FP-<Protocol>-MV'
 * The FAST policy name must not exceed 14 characters, if it does we truncate it by using the first 7 and last 6 characters(like we do for pool)
@@ -261,43 +262,43 @@ Set Dynamic Distribution -	NA
 Prerequisites . Cinder Backend (Storage Group)
 
     Key               Value
-    maxIOPS	      4000
-    maxMBPS	      4000
+    maxIOPS           4000
+    maxMBPS           4000
     DistributionType  Always
 
 ##### Step 1.
 Create QOS Specs with the prerequisite values above
 cinder qos-create <name> <key=value> [<key=value> ...]
 
-    cinder qos-create silver maxIOPS=4000 maxMBPS=4000 DistributionType=Always
+    #cinder qos-create silver maxIOPS=4000 maxMBPS=4000 DistributionType=Always
 
 ##### Step 2.
 Associate qos specs with specified volume type
 cinder qos-associate <qos_specs id> <volume_type_id>
 
-    cinder qos-associate 07767ad8-6170-4c71-abce-99e68702f051 224b1517-4a23-44b5-9035-8d9e2c18fb70
+    #cinder qos-associate 07767ad8-6170-4c71-abce-99e68702f051 224b1517-4a23-44b5-9035-8d9e2c18fb70
 
 ##### Step 3.
 Create volume with the volume type indicated above
 cinder create [--name <name>]  [--volume-type <volume-type>] size
 
-    cinder create --name test_volume --volume-type 224b1517-4a23-44b5-9035-8d9e2c18fb70 1
+    #cinder create --name test_volume --volume-type 224b1517-4a23-44b5-9035-8d9e2c18fb70 1
 
 ##### Outcome - VMAX (Storage Group)
-Host I/O Limit (MB/Sec) . 	4000
+Host I/O Limit (MB/Sec) - 	4000
 Host I/O Limit (IO/Sec) - 	4000
 Set Dynamic Distribution -	Always
 
 ##### Outcome - Cinder
 Volume is created against volume type and QOS is enforced with the parameters above
 
-####USE CASE 2 . LIMITS PRESET
+####USE CASE 2 - LIMITS PRESET
 
-Prerequisites . VMAX
-Host I/O Limit (MB/Sec) . 	2000
+Prerequisites - VMAX
+Host I/O Limit (MB/Sec) - 	2000
 Host I/O Limit (IO/Sec) - 	2000
 Set Dynamic Distribution -	Never
-Prerequisites . Cinder Backend (Storage Group)
+Prerequisites - Cinder Backend (Storage Group)
 
     Key               Value
     maxIOPS           4000
@@ -308,22 +309,22 @@ Prerequisites . Cinder Backend (Storage Group)
 Create QOS Specs with the prerequisite values above
 cinder qos-create <name> <key=value> [<key=value> ...]
 
-    cinder qos-create silver maxIOPS=4000 maxMBPS=4000 DistributionType=Always
+    #cinder qos-create silver maxIOPS=4000 maxMBPS=4000 DistributionType=Always
 
 ##### Step 2.
 Associate qos specs with specified volume type
 cinder qos-associate <qos_specs id> <volume_type_id>
 
-    cinder qos-associate 07767ad8-6170-4c71-abce-99e68702f051 224b1517-4a23-44b5-9035-8d9e2c18fb70
+    #cinder qos-associate 07767ad8-6170-4c71-abce-99e68702f051 224b1517-4a23-44b5-9035-8d9e2c18fb70
 
 ##### Step 3.
 Create volume with the volume type indicated above
 cinder create [--name <name>]  [--volume-type <volume-type>] size
 
-    cinder create --name test_volume --volume-type 224b1517-4a23-44b5-9035-8d9e2c18fb70 1
+    #cinder create --name test_volume --volume-type 224b1517-4a23-44b5-9035-8d9e2c18fb70 1
 
 ##### Outcome - VMAX (Storage Group)
-Host I/O Limit (MB/Sec) . 	4000
+Host I/O Limit (MB/Sec) -	4000
 Host I/O Limit (IO/Sec) - 	4000
 Set Dynamic Distribution -	Always
 
@@ -332,12 +333,12 @@ Volume is created against volume type and QOS is enforced with the parameters ab
 
 
 #### USE CASE 3 - LIMITS PRE-SETs
-Prerequisites . VMAX
+Prerequisites - VMAX
 
-Host I/O Limit (MB/Sec) . 	No Limit
+Host I/O Limit (MB/Sec) - 	No Limit
 Host I/O Limit (IO/Sec) - 	No Limit
 Set Dynamic Distribution -	NA
-Prerequisites . Cinder Backend (Storage Group)
+Prerequisites - Cinder Backend (Storage Group)
 
     Key               Value
     DistributionType  Always
@@ -346,22 +347,22 @@ Prerequisites . Cinder Backend (Storage Group)
 Create QOS Specs with the prerequisite values above
 cinder qos-create <name> <key=value> [<key=value> ...]
 
-    cinder qos-create silver DistributionType=Always
+    #cinder qos-create silver DistributionType=Always
 
 ##### Step 2.
 Associate qos specs with specified volume type
 cinder qos-associate <qos_specs id> <volume_type_id>
 
-    cinder qos-associate 07767ad8-6170-4c71-abce-99e68702f051 224b1517-4a23-44b5-9035-8d9e2c18fb70
+    #cinder qos-associate 07767ad8-6170-4c71-abce-99e68702f051 224b1517-4a23-44b5-9035-8d9e2c18fb70
 
 ##### Step 3.
 Create volume with the volume type indicated above
 cinder create [--name <name>]  [--volume-type <volume-type>] size
 
-    cinder create --name test_volume --volume-type 224b1517-4a23-44b5-9035-8d9e2c18fb70 1
+    #cinder create --name test_volume --volume-type 224b1517-4a23-44b5-9035-8d9e2c18fb70 1
 
 ##### Outcome - VMAX (Storage Group)
-Host I/O Limit (MB/Sec) . 	No Limit
+Host I/O Limit (MB/Sec) - 	No Limit
 Host I/O Limit (IO/Sec) - 	No Limit
 Set Dynamic Distribution -	NA
 
@@ -369,12 +370,12 @@ Set Dynamic Distribution -	NA
 Volume is created against volume type and there is no QOS change
 
 #### USE CASE 4 - LIMITS PRE-SETs
-Prerequisites . VMAX
+Prerequisites - VMAX
 
-Host I/O Limit (MB/Sec) . 	No Limit
+Host I/O Limit (MB/Sec) - 	No Limit
 Host I/O Limit (IO/Sec) - 	No Limit
 Set Dynamic Distribution -	NA
-Prerequisites . Cinder Backend (Storage Group)
+Prerequisites - Cinder Backend (Storage Group)
 
     Key               Value
     DistributionType  Always
@@ -383,22 +384,22 @@ Prerequisites . Cinder Backend (Storage Group)
 Create QOS Specs with the prerequisite values above
 cinder qos-create <name> <key=value> [<key=value> ...]
 
-    cinder qos-create silver DistributionType=Always
+    #cinder qos-create silver DistributionType=Always
 
 ##### Step 2.
 Associate qos specs with specified volume type
 cinder qos-associate <qos_specs id> <volume_type_id>
 
-    cinder qos-associate 07767ad8-6170-4c71-abce-99e68702f051 224b1517-4a23-44b5-9035-8d9e2c18fb70
+    #cinder qos-associate 07767ad8-6170-4c71-abce-99e68702f051 224b1517-4a23-44b5-9035-8d9e2c18fb70
 
 ##### Step 3.
 Create volume with the volume type indicated above
 cinder create [--name <name>]  [--volume-type <volume-type>] size
 
-    cinder create --name test_volume --volume-type 224b1517-4a23-44b5-9035-8d9e2c18fb70 1
+    #cinder create --name test_volume --volume-type 224b1517-4a23-44b5-9035-8d9e2c18fb70 1
 
 ##### Outcome - VMAX (Storage Group)
-Host I/O Limit (MB/Sec) . 	No Limit
+Host I/O Limit (MB/Sec) - 	No Limit
 Host I/O Limit (IO/Sec) - 	No Limit
 Set Dynamic Distribution -	NA
 
