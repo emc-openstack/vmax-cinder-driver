@@ -278,15 +278,15 @@ VMAX3
     administrator. For back ends exposing FAST policy automated tiering, the
     pool is the bind pool to be used with the FAST policy.
 
-***VMAX2 FastPolicy*** - Name of the FAST Policy to be used. By including this tag, volumes managed
+VMAX2 ***FastPolicy*** - Name of the FAST Policy to be used. By including this tag, volumes managed
     by this back end are treated as under FAST control. Omitting the
     ***FastPolicy*** tag means FAST is not enabled on the provided storage pool.
 
-***VMAX3 Slo*** - The Service Level Objective (SLO) that manages the underlying storage to
+VMAX3 ***Slo*** - The Service Level Objective (SLO) that manages the underlying storage to
     provide expected performance. Omitting the ***Slo*** tag means ***Optimised***
     SLO will be used instead.
 
-***VMAX3 Workload*** - When a workload type is added, the latency range is reduced due to the
+VMAX3 ***Workload*** - When a workload type is added, the latency range is reduced due to the
     added information. Omitting the ***Workload*** tag means the latency
     range will be the widest for its SLO type. 
 
@@ -316,7 +316,7 @@ or
 
 VMAX3
 
-   OS-<shortHostName>-<SRP>-<SLO>-<Workload>-<Protocol>-MV
+    OS-<shortHostName>-<SRP>-<SLO>-<Workload>-<Protocol>-MV
     
 
 ### Initiator Group Names
@@ -344,7 +344,7 @@ or
 
 VMAX3
 
-   OS-<shortHostName>-<SRP>-<SLO>-<Workload>-<Protocol>-SG
+    OS-<shortHostName>-<SRP>-<SLO>-<Workload>-<Protocol>-SG
 
 ## Concatenated/Striped volumes
 In order to support later expansion of created volumes, the VMAX Cinder drivers create concatenated volumes as the default layout. If later expansion is not required, users can opt to create striped volumes in order to optimize I/O performance.  
