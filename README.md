@@ -7,8 +7,8 @@ Licensed under the Apache License, Version 2.0 (the "License"); you may not use 
 
     http://www.apache.org/licenses/LICENSE-2.0
 
-### Contents
-liberty-patch1-2016-08-30.tar.gz contains the following 10 files
+## Contents
+liberty-patch1-2016-08-30.tar.gz contains the following 10 files:
 
     emc_vmax_fc.py
     emc_vmax_iscsi.py
@@ -22,7 +22,7 @@ liberty-patch1-2016-08-30.tar.gz contains the following 10 files
     test_emc_vmax.py
 
 * md5sum.txt is the md5sum of liberty-patch1-2016-08-30.tar.gz
-* Support.txt contains new features supported in this patch
+* Support.txt contains a list of new features supported in this patch
 * README.md is the documentation for this patch
 
 # VMAX Driver (FC and iSCSI)
