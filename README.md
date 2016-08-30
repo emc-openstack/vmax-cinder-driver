@@ -65,6 +65,20 @@ The following operations are supported on VMAX arrays:
 *	Create Cgsnapshot (snapshot of a consistency group)
 *	Delete Cgsnapshot
 
+VMAX drivers also support the following features:
+*  Dynamic masking view creation.
+*  Dynamic determination of the target iSCSI IP address.
+
+VMAX2
+*  FAST automated storage tiering policy.
+*  Striped volume creation.
+
+VMAX3
+*  SLO support.
+*  Dynamic masking view creation.
+*  SnapVX support.
+*  Extend volume and iSCSI support.
+
 ## Required Software Packages
 
 ### Install SMI-S Provider with Solutions Enabler 
@@ -72,6 +86,69 @@ The following operations are supported on VMAX arrays:
 *	Solutions Enabler 8.1.2(with SMI-S component) for VMAX2 and VMAX3
 *	SMI-S Provider is available from available from [EMC’s support website](https://support.emc.com)
 *	The SMI-S Provider with Solutions Enabler can be installed as a vApp, or on a Windows or Linux host
+*       Ensure that there is only one SMI-S (ECOM) server active on the same VMAX array.
+
+### Required VMAX Software Suites for OpenStack
+There are five Software Suites available for the VMAX3:
+
+* Base Suite
+* Advanced Suite
+* Local Replication Suite
+* Remote Replication Suite
+* Total Productivity Pack
+
+Openstack requires the Advanced Suite and the Local Replication Suite
+or the Total Productivity Pack (it includes the Advanced Suite and the
+Local Replication Suite) for the VMAX3.
+
+There are four bundled Software Suites for the VMAX2:
+
+* Advanced Software Suite
+* Base Software Suite
+* Enginuity Suite
+* Symmetrix Management Suite
+
+OpenStack requires the Advanced Software Bundle for the VMAX2.
+
+or
+
+The VMAX2 Optional Software are:
+
+* EMC Storage Analytics (ESA)
+* FAST VP
+* Ionix ControlCenter and ProSphere Package
+* Open Replicator for Symmetrix
+* PowerPath
+* RecoverPoint EX
+* SRDF for VMAX 10K
+* Storage Configuration Advisor
+* TimeFinder for VMAX10K
+
+### eLicensing Support
+OpenStack requires TimeFinder for VMAX10K for the VMAX2.
+
+Each are licensed separately. For further details on how to get the
+relevant license(s), reference eLicensing Support below.
+
+To activate your entitlements and obtain your VMAX license files, visit the
+Service Center on ``https://support.emc.com``, as directed on your License
+Authorization Code (LAC) letter emailed to you.
+
+-  For help with missing or incorrect entitlements after activation
+   (that is, expected functionality remains unavailable because it is not
+   licensed), contact your EMC account representative or authorized reseller.
+
+-  For help with any errors applying license files through Solutions Enabler,
+   contact the EMC Customer Support Center.
+
+-  If you are missing a LAC letter or require further instructions on
+   activating your licenses through the Online Support site, contact EMC's
+   worldwide Licensing team at ``licensing@emc.com`` or call:
+
+   North America, Latin America, APJK, Australia, New Zealand: SVC4EMC
+   (800-782-4362) and follow the voice prompts.
+
+   EMEA: +353 (0) 21 4879862 and follow the voice prompts.
 
 ### Install PyWBEM
 * Required version: PyWBEM 0.7
@@ -141,6 +218,7 @@ Each enabled backend is configured via parameters contained in an EMC-specific c
 
 Here is an example and description of the contents:
 
+VMAX2
     <?xml version='1.0' encoding='UTF-8'?>
     <EMC>
        <EcomServerIp>10.108.246.202</EcomServerIp>
@@ -155,23 +233,70 @@ Here is an example and description of the contents:
        <Pool>FC_GOLD1</Pool>
        <FastPolicy>GOLD1</FastPolicy>
     </EMC>
-  
-EcomServerIp, EcomServerPort, EcomUserName and EcomPassword identify the ECOM (EMC SMI-S Provider) server to be used, and provide logon credentials.
 
-PortGroups supplies the names of VMAX port groups that have been pre-configured to expose volumes managed by this Backend. Each supplied port group should have sufficient number and distribution of ports (across directors and switches) as to ensure adequate bandwidth and failure protection for the volume connections. PortGroups can contain one or more port groups of either iSCSI or FC ports. When a dynamic masking view is created by the VMAX driver, the port group is chosen randomly from the list above, to evenly distribute load across the set of groups provided.  
+VMAX3
+    <?xml version="1.0" encoding="UTF-8" ?>
+    <EMC>
+         <EcomServerIp>1.1.1.1</EcomServerIp>
+         <EcomServerPort>00</EcomServerPort>
+         <EcomUserName>user1</EcomUserName>
+         <EcomPassword>password1</EcomPassword>
+         <PortGroups>
+           <PortGroup>OS-PORTGROUP1-PG</PortGroup>
+           <PortGroup>OS-PORTGROUP2-PG</PortGroup>
+         </PortGroups>
+         <Array>111111111111</Array>
+         <Pool>SRP_1</Pool>
+         <Slo>Gold</Slo>
+         <Workload>OLTP</Workload>
+    </EMC>
 
-NOTE:  Make sure that the PortGroups set contains either all FC or all iSCSI port groups (for a given backend), as appropriate for the configured driver (iSCSI or FC).
-
-The Array tag holds the unique VMAX array serial number.
-
-The Pool tag holds the unique pool name within a given array. 
-
-For backends not using FAST automated tiering, the pool is a single pool that has been created by the admin. 
-
-For backends exposing FAST policy automated tiering, the pool name is the bind pool to be used with the FAST policy.
-
-The FastPolicy tag conveys the name of the FAST Policy to be used. By including this tag, volumes managed by this backend are treated as under FAST control.  Omitting the FastPolicy tag means FAST is not enabled on the provided storage pool. 
  
+``EcomServerIp``
+    IP address of the ECOM server which is packaged with SMI-S.
+
+``EcomServerPort``
+    Port number of the ECOM server which is packaged with SMI-S.
+
+``EcomUserName`` and ``EcomPassword``
+    Cedentials for the ECOM server.
+
+``PortGroups``
+    Supplies the names of VMAX port groups that have been pre-configured to
+    expose volumes managed by this backend. Each supplied port group should
+    have sufficient number and distribution of ports (across directors and
+    switches) as to ensure adequate bandwidth and failure protection for the
+    volume connections. PortGroups can contain one or more port groups of
+    either iSCSI or FC ports. When a dynamic masking view is created by the
+    VMAX driver, the port group is chosen randomly from the PortGroup list, to
+    evenly distribute load across the set of groups provided. Make sure that
+    the PortGroups set contains either all FC or all iSCSI port groups (for a
+    given back end), as appropriate for the configured driver (iSCSI or FC).
+
+``Array``
+    Unique VMAX array serial number.
+
+``Pool``
+    Unique pool name within a given array. For back ends not using FAST
+    automated tiering, the pool is a single pool that has been created by the
+    administrator. For back ends exposing FAST policy automated tiering, the
+    pool is the bind pool to be used with the FAST policy.
+
+``VMAX2 FastPolicy``
+    Name of the FAST Policy to be used. By including this tag, volumes managed
+    by this back end are treated as under FAST control. Omitting the
+    ``FastPolicy`` tag means FAST is not enabled on the provided storage pool.
+
+``VMAX3 Slo``
+    The Service Level Objective (SLO) that manages the underlying storage to
+    provide expected performance. Omitting the ``Slo`` tag means ``Optimised``
+    SLO will be used instead.
+
+``VMAX3 Workload``
+    When a workload type is added, the latency range is reduced due to the
+    added information. Omitting the ``Workload`` tag means the latency
+    range will be the widest for its SLO type. 
+
 ## Configuring Connectivity
 
 ### FC Zoning with VMAX
@@ -187,8 +312,15 @@ With the Icehouse release of OpenStack, a Zone Manager has been added to automat
 ### Masking View Names
 Masking views for the VMAX FC and iSCSI drivers are now dynamically created by the VMAX Cinder driver using the following naming conventions:
 
+VMAX2
     OS-<shortHostName>-<poolName>-I-MV (for Masking Views using iSCSI)
     OS-<shortHostName>-<poolName>-F-MV (for Masking Views using FC)
+or 
+    OS-<shortHostName>-<FastPolicyName>-FP-<Protocol>-MV
+
+VMAX3
+   OS-<shortHostName>-<SRP>-<SLO>-<Workload>-<Protocol>-MV
+    
 
 ### Initiator Group Names
 For each host that is attached to VMAX volumes using the Cinder drivers, an initiator group is created or re-used (per attachment type). All initiators of appropriate type known for that host are included in the group. At each new attach volume operation, the VMAX driver retrieves the initiators (either WWNNs or IQNs) from OpenStack and adds or updates the contents of the Initiator Group as required. Names are of the format:
@@ -204,8 +336,14 @@ VMAX array FA ports to be used in a new masking view are chosen from the list pr
 ### Storage Group Names
 As volumes are attached to a host, they are either added to an existing storage group (if it exists) or a new storage group is created and the volume is then added. Storage groups contain volumes created from a pool (either single-pool or FAST-controlled), attached to a single host, over a single connection type (iSCSI or FC). Names are formed:
 
+VMAX2
     OS-<shortHostName>-<poolName>-I-SG (attached over iSCSI)
     OS-<shortHostName>-<poolName>-F-SG (attached over Fibre Channel)
+or
+    OS-<shortHostName>-<FastPolicyName>-FP-<Protocol>-SG
+
+VMAX3
+   OS-<shortHostName>-<SRP>-<SLO>-<Workload>-<Protocol>-SG
 
 ## Concatenated/Striped volumes
 In order to support later expansion of created volumes, the VMAX Cinder drivers create concatenated volumes as the default layout. If later expansion is not required, users can opt to create striped volumes in order to optimize I/O performance.  
@@ -244,20 +382,6 @@ For the second iteration of over subscription we take into account the EMCMaxSub
 If FAST is set and multiple pools are associated with a FAST policy, then the same rules apply.  The difference is, the TotalManagedSpace and EMCSubscribedCapacity for each pool associated with the FAST policy are aggregated.
 
 ***Scenario 5*** - EMCMaxSubscriptionPercent is 200 on one pool.  It is 300 on another pool.  The user defined max_over_subscription_ratio is 2.5.  Oversubscription is 200% on the first pool and 250% on the other.
-
-## FAST policy
-
-We treat a FAST policy as a .virtual pool., comprised of the sum of capacities of the underlying physical pools. Because those physical pools could be associated with multiple FAST policies, we create a storage group for each FAST policy in order to distinguish among them.  It is the therefore name of the FAST policy and not the name of the Pool that is used to generate unique names.  Please note:
-
-The format of the storage group name is:
-
-    OS-<shortHostName>-<FastPolicyName>-FP-<Protocol>-SG
-The format of the masking view name is:
-
-    OS-<shortHostName>-<FastPolicyName>-FP-<Protocol>-MV
-The FAST policy name must not exceed 14 characters, if it does we truncate it by using the first 7 and last 6 characters(like we do for pool)
-
-There is nothing preventing the use of the same name for a FAST policy and a pool.  Therefore, we append -FP to the FAST policy name to ensure uniqueness
 
 ## QoS (Quality of Service) Support
 
