@@ -219,6 +219,7 @@ Each enabled backend is configured via parameters contained in an EMC-specific c
 Here is an example and description of the contents:
 
 VMAX2
+
     <?xml version='1.0' encoding='UTF-8'?>
     <EMC>
        <EcomServerIp>10.108.246.202</EcomServerIp>
@@ -235,6 +236,7 @@ VMAX2
     </EMC>
 
 VMAX3
+
     <?xml version="1.0" encoding="UTF-8" ?>
     <EMC>
          <EcomServerIp>1.1.1.1</EcomServerIp>
@@ -252,17 +254,13 @@ VMAX3
     </EMC>
 
  
-``EcomServerIp``
-    IP address of the ECOM server which is packaged with SMI-S.
+***EcomServerIp*** - IP address of the ECOM server which is packaged with SMI-S.
 
-``EcomServerPort``
-    Port number of the ECOM server which is packaged with SMI-S.
+***EcomServerPort*** - Port number of the ECOM server which is packaged with SMI-S.
 
-``EcomUserName`` and ``EcomPassword``
-    Cedentials for the ECOM server.
+***EcomUserName*** and ***EcomPassword*** - Credentials for the ECOM server.
 
-``PortGroups``
-    Supplies the names of VMAX port groups that have been pre-configured to
+***PortGroups*** - Supplies the names of VMAX port groups that have been pre-configured to
     expose volumes managed by this backend. Each supplied port group should
     have sufficient number and distribution of ports (across directors and
     switches) as to ensure adequate bandwidth and failure protection for the
@@ -273,28 +271,23 @@ VMAX3
     the PortGroups set contains either all FC or all iSCSI port groups (for a
     given back end), as appropriate for the configured driver (iSCSI or FC).
 
-``Array``
-    Unique VMAX array serial number.
+***Array*** - Unique VMAX array serial number.
 
-``Pool``
-    Unique pool name within a given array. For back ends not using FAST
+***Pool*** - Unique pool name within a given array. For back ends not using FAST
     automated tiering, the pool is a single pool that has been created by the
     administrator. For back ends exposing FAST policy automated tiering, the
     pool is the bind pool to be used with the FAST policy.
 
-``VMAX2 FastPolicy``
-    Name of the FAST Policy to be used. By including this tag, volumes managed
+***VMAX2 FastPolicy*** - Name of the FAST Policy to be used. By including this tag, volumes managed
     by this back end are treated as under FAST control. Omitting the
-    ``FastPolicy`` tag means FAST is not enabled on the provided storage pool.
+    ***FastPolicy*** tag means FAST is not enabled on the provided storage pool.
 
-``VMAX3 Slo``
-    The Service Level Objective (SLO) that manages the underlying storage to
-    provide expected performance. Omitting the ``Slo`` tag means ``Optimised``
+***VMAX3 Slo*** - The Service Level Objective (SLO) that manages the underlying storage to
+    provide expected performance. Omitting the ***Slo*** tag means ***Optimised***
     SLO will be used instead.
 
-``VMAX3 Workload``
-    When a workload type is added, the latency range is reduced due to the
-    added information. Omitting the ``Workload`` tag means the latency
+***VMAX3 Workload*** - When a workload type is added, the latency range is reduced due to the
+    added information. Omitting the ***Workload*** tag means the latency
     range will be the widest for its SLO type. 
 
 ## Configuring Connectivity
@@ -313,12 +306,16 @@ With the Icehouse release of OpenStack, a Zone Manager has been added to automat
 Masking views for the VMAX FC and iSCSI drivers are now dynamically created by the VMAX Cinder driver using the following naming conventions:
 
 VMAX2
+
     OS-<shortHostName>-<poolName>-I-MV (for Masking Views using iSCSI)
     OS-<shortHostName>-<poolName>-F-MV (for Masking Views using FC)
-or 
+
+or
+ 
     OS-<shortHostName>-<FastPolicyName>-FP-<Protocol>-MV
 
 VMAX3
+
    OS-<shortHostName>-<SRP>-<SLO>-<Workload>-<Protocol>-MV
     
 
@@ -337,12 +334,16 @@ VMAX array FA ports to be used in a new masking view are chosen from the list pr
 As volumes are attached to a host, they are either added to an existing storage group (if it exists) or a new storage group is created and the volume is then added. Storage groups contain volumes created from a pool (either single-pool or FAST-controlled), attached to a single host, over a single connection type (iSCSI or FC). Names are formed:
 
 VMAX2
+
     OS-<shortHostName>-<poolName>-I-SG (attached over iSCSI)
     OS-<shortHostName>-<poolName>-F-SG (attached over Fibre Channel)
+
 or
+
     OS-<shortHostName>-<FastPolicyName>-FP-<Protocol>-SG
 
 VMAX3
+
    OS-<shortHostName>-<SRP>-<SLO>-<Workload>-<Protocol>-SG
 
 ## Concatenated/Striped volumes
