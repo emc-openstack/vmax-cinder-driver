@@ -151,7 +151,7 @@ Authorization Code (LAC) letter emailed to you.
    EMEA: +353 (0) 21 4879862 and follow the voice prompts.
 
 ### Install PyWBEM
-* Required version: PyWBEM 0.7
+* Required version: PyWBEM 0.7 only
 * Available from [Sourceforge](http://sourceforge.net/projects/pywbem), or using the following commands:
     * Install for Ubuntu:
     
@@ -214,7 +214,7 @@ For more details on multi-backend configuration, see [OpenStack Administration G
 
 ## EMC-specific Configuration Files
 
-Each enabled backend is configured via parameters contained in an EMC-specific configuration file. The default EMC configuration file is named /etc/cinder/cinder_emc config.xml, and is configured for the iSCSI driver by default. When multiple backends are configured in cinder.conf, the names of each configuration group’s file is explicitly provided in the cinder_emc_config_file parameter.
+Each enabled backend is configured via parameters contained in an EMC-specific configuration file. The default EMC configuration file is named /etc/cinder/cinder_emc config.xml, and is configured for the iSCSI driver by default. When multiple backends are configured in cinder.conf, the names of each configuration groups file is explicitly provided in the cinder_emc_config_file parameter.
 
 Here is an example and description of the contents:
 
@@ -393,7 +393,7 @@ Quality of service has traditionally been associated with network bandwidth usag
 * Dynamic Distribution
 * The VMAX3 offers modification of QOS at the Storage Group level
 
-### USE CASE 1 - DEFAULT VALUES
+### USE CASE 1 - Default Values
 
 Prerequisites - VMAX
 
@@ -432,9 +432,9 @@ cinder create [--name <name>]  [--volume-type <volume-type>] size
 * Set Dynamic Distribution -	Always
 
 #### Outcome - Cinder
-Volume is created against volume type and QOS is enforced with the parameters above
+Volume is created against volume type and QOS is enforced with the parameters above.
 
-###USE CASE 2 - LIMITS PRESET
+###USE CASE 2 - Preset limits
 
 Prerequisites - VMAX
 
@@ -473,10 +473,10 @@ cinder create [--name <name>]  [--volume-type <volume-type>] size
 * Set Dynamic Distribution -	Always
 
 #### Outcome - Cinder
-Volume is created against volume type and QOS is enforced with the parameters above
+Volume is created against volume type and QOS is enforced with the parameters above.
 
 
-### USE CASE 3 - LIMITS PRE-SETs
+### USE CASE 3 - Preset limits
 Prerequisites - VMAX
 
 * Host I/O Limit (MB/Sec) - 	No Limit
@@ -514,7 +514,7 @@ cinder create [--name <name>]  [--volume-type <volume-type>] size
 #### Outcome - Cinder
 Volume is created against volume type and there is no QOS change
 
-### USE CASE 4 - LIMITS PRE-SETs
+### USE CASE 4 - Preset limits
 Prerequisites - VMAX
 
 * Host I/O Limit (MB/Sec) - 	No Limit
@@ -550,4 +550,4 @@ cinder create [--name <name>]  [--volume-type <volume-type>] size
 * Set Dynamic Distribution -	NA
 
 #### Outcome - Cinder
-Volume is created against volume type and there is no QOS change
+Volume is created against volume type and there is no QOS change.
