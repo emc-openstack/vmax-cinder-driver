@@ -1,4 +1,4 @@
-# Copyright (c) 2012 - 2014 EMC Corporation.
+# Copyright (c) 2012 - 2015 EMC Corporation.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,26 +14,27 @@
 #    under the License.
 
 import base64
-import httplib
 import os
 import socket
 import ssl
 import string
 import struct
-import urllib
 
 from eventlet import patcher
-import OpenSSL
+try:
+    import OpenSSL
+except ImportError:
+    OpenSSL = None
+from oslo_log import log as logging
 import six
+from six.moves import http_client
+from six.moves import urllib
 
-from cinder.i18n import _LI
-from cinder.openstack.common import log as logging
+from cinder.i18n import _, _LI
 
 # Handle case where we are running in a monkey patched environment
-if patcher.is_monkey_patched('socket'):
-    from eventlet.green.OpenSSL.SSL import GreenConnection as Connection
-else:
-    raise ImportError
+if OpenSSL and patcher.is_monkey_patched('socket'):
+    from eventlet.green.OpenSSL import SSL
 
 try:
     import pywbem
@@ -53,7 +54,9 @@ def to_bytes(s):
 
 
 def get_default_ca_certs():
-    """Try to find out system path with ca certificates. This path is cached and
+    """Gets the default CA certificates if found, otherwise None.
+
+    Try to find out system path with ca certificates. This path is cached and
     returned. If no path is found out, None is returned.
     """
     if not hasattr(get_default_ca_certs, '_path'):
@@ -72,13 +75,13 @@ def get_default_ca_certs():
 class OpenSSLConnectionDelegator(object):
     """An OpenSSL.SSL.Connection delegator.
 
-    Supplies an additional 'makefile' method which httplib requires
+    Supplies an additional 'makefile' method which http_client requires
     and is not present in OpenSSL.SSL.Connection.
     Note: Since it is not possible to inherit from OpenSSL.SSL.Connection
     a delegator must be used.
     """
     def __init__(self, *args, **kwargs):
-        self.connection = Connection(*args, **kwargs)
+        self.connection = SSL.GreenConnection(*args, **kwargs)
 
     def __getattr__(self, name):
         return getattr(self.connection, name)
@@ -87,7 +90,7 @@ class OpenSSLConnectionDelegator(object):
         return socket._fileobject(self.connection, *args, **kwargs)
 
 
-class HTTPSConnection(httplib.HTTPSConnection):
+class HTTPSConnection(http_client.HTTPSConnection):
     def __init__(self, host, port=None, key_file=None, cert_file=None,
                  strict=None, ca_certs=None, no_verification=False):
         if not pywbemAvailable:
@@ -99,20 +102,21 @@ class HTTPSConnection(httplib.HTTPSConnection):
         else:
             excp_lst = ()
         try:
-            httplib.HTTPSConnection.__init__(self, host, port,
-                                             key_file=key_file,
-                                             cert_file=cert_file)
+            http_client.HTTPSConnection.__init__(self, host, port,
+                                                 key_file=key_file,
+                                                 cert_file=cert_file)
 
             self.key_file = None if key_file is None else key_file
             self.cert_file = None if cert_file is None else cert_file
             self.insecure = no_verification
-            self.ca_certs = None if ca_certs is None else str(ca_certs)
+            self.ca_certs = (
+                None if ca_certs is None else six.text_type(ca_certs))
             self.set_context()
             # ssl exceptions are reported in various form in Python 3
             # so to be compatible, we report the same kind as under
             # Python2
         except excp_lst as e:
-            raise pywbem.cim_http.Error(str(e))
+            raise pywbem.cim_http.Error(six.text_type(e))
 
     @staticmethod
     def host_matches_cert(host, x509):
@@ -124,49 +128,55 @@ class HTTPSConnection(httplib.HTTPSConnection):
         or a Subject Alternative Name matches 'host'.
         """
         def check_match(name):
-            # Directly match the name
+            # Directly match the name.
             if name == host:
                 return True
 
-            # Support single wildcard matching
+            # Support single wildcard matching.
             if name.startswith('*.') and host.find('.') > 0:
                 if name[2:] == host.split('.', 1)[1]:
                     return True
 
         common_name = x509.get_subject().commonName
-        # First see if we can match the CN
+        # First see if we can match the CN.
         if check_match(common_name):
             return True
-            # Also try Subject Alternative Names for a match
+            # Also try Subject Alternative Names for a match.
         san_list = None
         for i in range(x509.get_extension_count()):
             ext = x509.get_extension(i)
             if ext.get_short_name() == b'subjectAltName':
-                san_list = str(ext)
+                san_list = six.text_type(ext)
                 for san in ''.join(san_list.split()).split(','):
                     if san.startswith('DNS:'):
                         if check_match(san.split(':', 1)[1]):
                             return True
 
-        # Server certificate does not match host
-        msg = ('Host "%s" does not match x509 certificate contents: '
-               'CommonName "%s"' % (host, common_name))
+        # Server certificate does not match host.
+        msg = (_("Host %(host)s does not match x509 certificate contents: "
+                 "CommonName %(commonName)s.")
+               % {'host': host,
+                  'commonName': common_name})
+
         if san_list is not None:
-            msg = msg + ', subjectAltName "%s"' % san_list
+            msg = (_("%(message)s, subjectAltName: %(sanList)s.")
+                   % {'message': msg,
+                      'sanList': san_list})
         raise pywbem.cim_http.AuthError(msg)
 
     def verify_callback(self, connection, x509, errnum,
                         depth, preverify_ok):
         if x509.has_expired():
-            msg = "SSL Certificate expired on '%s'" % x509.get_notAfter()
+            msg = msg = (_("SSL Certificate expired on %s.")
+                         % x509.get_notAfter())
             raise pywbem.cim_http.AuthError(msg)
 
         if depth == 0 and preverify_ok:
             # We verify that the host matches against the last
-            # certificate in the chain
+            # certificate in the chain.
             return self.host_matches_cert(self.host, x509)
         else:
-            # Pass through OpenSSL's default result
+            # Pass through OpenSSL's default result.
             return preverify_ok
 
     def set_context(self):
@@ -184,32 +194,37 @@ class HTTPSConnection(httplib.HTTPSConnection):
             try:
                 self.context.use_certificate_file(self.cert_file)
             except Exception as e:
-                msg = ('Unable to load cert from "%s" %s'
-                       % (self.cert_file, e))
+                msg = (_("Unable to load cert from %(cert)s %(e)s.")
+                       % {'cert': self.cert_file,
+                          'e': e})
                 raise pywbem.cim_http.AuthError(msg)
             if self.key_file is None:
-                # We support having key and cert in same file
+                # We support having key and cert in same file.
                 try:
                     self.context.use_privatekey_file(self.cert_file)
                 except Exception as e:
-                    msg = ('No key file specified and unable to load key '
-                           'from "%s" %s' % (self.cert_file, e))
+                    msg = (_("No key file specified and unable to load key "
+                             "from %(cert)s %(e)s.")
+                           % {'cert': self.cert_file,
+                              'e': e})
                     raise pywbem.cim_http.AuthError(msg)
 
         if self.key_file:
             try:
                 self.context.use_privatekey_file(self.key_file)
             except Exception as e:
-                msg = ('Unable to load key from "%s" %s'
-                       % (self.key_file, e))
+                msg = (_("Unable to load key from %(cert)s %(e)s.")
+                       % {'cert': self.cert_file,
+                          'e': e})
                 raise pywbem.cim_http.AuthError(msg)
 
         if self.ca_certs:
             try:
                 self.context.load_verify_locations(to_bytes(self.ca_certs))
             except Exception as e:
-                msg = ('Unable to load CA from "%s" %s'
-                       % (self.ca_certs, e))
+                msg = (_("Unable to load CA from %(cert)s %(e)s.")
+                       % {'cert': self.cert_file,
+                          'e': e})
                 raise pywbem.cim_http.AuthError(msg)
         else:
             self.context.set_default_verify_paths()
@@ -241,7 +256,7 @@ def wbem_request(url, data, creds, headers=None, debug=0, x509=None,
     """Send request over HTTP.
 
     Send XML data over HTTP to the specified url. Return the
-    response in XML.  Uses Python's build-in httplib.  x509 may be a
+    response in XML.  Uses Python's build-in http_client.  x509 may be a
     dictionary containing the location of the SSL certificate and key
     files.
     """
@@ -260,7 +275,7 @@ def wbem_request(url, data, creds, headers=None, debug=0, x509=None,
     localAuthHeader = None
     tryLimit = 5
 
-    if isinstance(data, unicode):
+    if isinstance(data, six.text_type):
         data = data.encode('utf-8')
     data = '<?xml version="1.0" encoding="utf-8" ?>\n' + data
 
@@ -269,7 +284,6 @@ def wbem_request(url, data, creds, headers=None, debug=0, x509=None,
     elif no_verification:
         ca_certs = None
 
-    # local = False
     if use_ssl:
         h = HTTPSConnection(
             host,
@@ -296,10 +310,10 @@ def wbem_request(url, data, creds, headers=None, debug=0, x509=None,
             h.putheader('PegasusAuthorization', 'Local "%s"' % locallogin)
 
         for hdr in headers:
-            if isinstance(hdr, unicode):
+            if isinstance(hdr, six.text_type):
                 hdr = hdr.encode('utf-8')
             s = map(lambda x: string.strip(x), string.split(hdr, ":", 1))
-            h.putheader(urllib.quote(s[0]), urllib.quote(s[1]))
+            h.putheader(urllib.parse.quote(s[0]), urllib.parse.quote(s[1]))
 
         try:
             h.endheaders()
@@ -315,13 +329,18 @@ def wbem_request(url, data, creds, headers=None, debug=0, x509=None,
             if response.status != 200:
                 raise pywbem.cim_http.Error('HTTP error')
 
-        except httplib.BadStatusLine as arg:
-            raise pywbem.cim_http.Error("Bad Status line returned: '%s'"
-                                        % arg)
-        except socket.error as arg:
-            raise pywbem.cim_http.Error("Socket error: %s" % (arg,))
+        except http_client.BadStatusLine as arg:
+            msg = (_("Bad Status line returned: %(arg)s.")
+                   % {'arg': arg})
+            raise pywbem.cim_http.Error(msg)
         except socket.sslerror as arg:
-            raise pywbem.cim_http.Error("SSL error: %s" % (arg,))
+            msg = (_("SSL error: %(arg)s.")
+                   % {'arg': arg})
+            raise pywbem.cim_http.Error(msg)
+        except socket.error as arg:
+            msg = (_("Socket error: %(arg)s.")
+                   % {'arg': arg})
+            raise pywbem.cim_http.Error(msg)
 
         break
 
