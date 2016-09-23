@@ -323,9 +323,9 @@ class EMCVMAXMasking(object):
         maskingViewName = maskingViewDict['maskingViewName']
 
         # First verify that the initiator group matches the initiators.
-        errorMessage = self._check_existing_initiator_group(
-            conn, controllerConfigService, maskingViewName,
-            connector, storageSystemName, igGroupName, extraSpecs)
+        # errorMessage = self._check_existing_initiator_group(
+        #    conn, controllerConfigService, maskingViewName,
+        #    connector, storageSystemName, igGroupName, extraSpecs)
 
         if errorMessage:
             return storageGroupInstanceName, errorMessage
