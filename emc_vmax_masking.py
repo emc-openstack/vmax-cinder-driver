@@ -327,8 +327,8 @@ class EMCVMAXMasking(object):
         #    conn, controllerConfigService, maskingViewName,
         #    connector, storageSystemName, igGroupName, extraSpecs)
 
-        if errorMessage:
-            return storageGroupInstanceName, errorMessage
+        #if errorMessage:
+        #    return storageGroupInstanceName, errorMessage
 
         storageGroupInstanceName, errorMessage = (
             self._check_existing_storage_group(
