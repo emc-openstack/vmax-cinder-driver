@@ -1,4 +1,4 @@
-# Copyright (c) 2012 - 2014 EMC Corporation.
+# Copyright (c) 2012 - 2015 EMC Corporation.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,11 +14,12 @@
 #    under the License.
 import time
 
+from oslo_concurrency import lockutils
+from oslo_log import log as logging
 import six
 
 from cinder import exception
-from cinder.i18n import _, _LE
-from cinder.openstack.common import log as logging
+from cinder.i18n import _, _LE, _LI
 from cinder.volume.drivers.emc import emc_vmax_utils
 
 
@@ -30,6 +31,7 @@ POSTGROUPTYPE = 3
 EMC_ROOT = 'root/emc'
 THINPROVISIONINGCOMPOSITE = 32768
 THINPROVISIONING = 5
+ALREADY_EXISTS = 'Device already exists in specified group'
 
 
 class EMCVMAXProvision(object):
@@ -43,15 +45,17 @@ class EMCVMAXProvision(object):
         self.utils = emc_vmax_utils.EMCVMAXUtils(prtcl)
 
     def delete_volume_from_pool(
-            self, conn, storageConfigservice, volumeInstanceName, volumeName):
+            self, conn, storageConfigservice, volumeInstanceName, volumeName,
+            extraSpecs):
         """Given the volume instance remove it from the pool.
 
         :param conn: connection the the ecom server
         :param storageConfigservice: volume created from job
         :param volumeInstanceName: the volume instance name
         :param volumeName: the volume name (String)
-        :param
-        :param rc: return code
+        :param extraSpecs: additional info
+        :returns: int -- return code
+        :raises: VolumeBackendAPIException
         """
         startTime = time.time()
 
@@ -66,11 +70,12 @@ class EMCVMAXProvision(object):
             TheElements=theElements)
 
         if rc != 0L:
-            rc, errordesc = self.utils.wait_for_job_complete(conn, job)
+            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                             extraSpecs)
             if rc != 0L:
                 exceptionMessage = (_(
-                    "Error Delete Volume: %(volumeName)s.  "
-                    "Return code: %(rc)lu.  Error: %(error)s")
+                    "Error Delete Volume: %(volumeName)s. "
+                    "Return code: %(rc)lu.  Error: %(error)s.")
                     % {'volumeName': volumeName,
                        'rc': rc,
                        'error': errordesc})
@@ -79,7 +84,7 @@ class EMCVMAXProvision(object):
                     data=exceptionMessage)
 
         LOG.debug("InvokeMethod EMCReturnToStoragePool took: "
-                  "%(delta)s H:MM:SS",
+                  "%(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
 
@@ -87,16 +92,18 @@ class EMCVMAXProvision(object):
 
     def create_volume_from_pool(
             self, conn, storageConfigService, volumeName,
-            poolInstanceName, volumeSize):
+            poolInstanceName, volumeSize, extraSpecs):
         """Create the volume in the specified pool.
 
         :param conn: the connection information to the ecom server
         :param storageConfigService: the storage configuration service
         :param volumeName: the volume name (String)
         :param poolInstanceName: the pool instance name to create
-                                 the dummy volume in
+            the dummy volume in
         :param volumeSize: volume size (String)
-        :returns: volumeDict - the volume dict
+        :param extraSpecs: additional info
+        :returns: dict -- the volume dict
+        :raises: VolumeBackendAPIException
         """
         startTime = time.time()
 
@@ -108,16 +115,17 @@ class EMCVMAXProvision(object):
             Size=self.utils.get_num(volumeSize, '64'),
             EMCBindElements=False)
 
-        LOG.debug("Create Volume: %(volumename)s  Return code: %(rc)lu",
+        LOG.debug("Create Volume: %(volumename)s  Return code: %(rc)lu.",
                   {'volumename': volumeName,
                    'rc': rc})
 
         if rc != 0L:
-            rc, errordesc = self.utils.wait_for_job_complete(conn, job)
+            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                             extraSpecs)
             if rc != 0L:
                 exceptionMessage = (_(
-                    "Error Create Volume: %(volumeName)s.  "
-                    "Return code: %(rc)lu.  Error: %(error)s")
+                    "Error Create Volume: %(volumeName)s. "
+                    "Return code: %(rc)lu.  Error: %(error)s.")
                     % {'volumeName': volumeName,
                        'rc': rc,
                        'error': errordesc})
@@ -126,24 +134,27 @@ class EMCVMAXProvision(object):
                     data=exceptionMessage)
 
         LOG.debug("InvokeMethod CreateOrModifyElementFromStoragePool "
-                  "took: %(delta)s H:MM:SS",
+                  "took: %(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
 
-        # Find the newly created volume
+        # Find the newly created volume.
         volumeDict = self.get_volume_dict_from_job(conn, job['Job'])
         return volumeDict, rc
 
     def create_and_get_storage_group(self, conn, controllerConfigService,
-                                     storageGroupName, volumeInstanceName):
+                                     storageGroupName, volumeInstanceName,
+                                     extraSpecs):
         """Create a storage group and return it.
 
         :param conn: the connection information to the ecom server
         :param controllerConfigService: the controller configuration service
         :param storageGroupName: the storage group name (String
         :param volumeInstanceName: the volume instance name
+        :param extraSpecs: additional info
         :returns: foundStorageGroupInstanceName - instance name of the
-                                                  default storage group
+            default storage group
+        :raises: VolumeBackendAPIException
         """
         startTime = time.time()
 
@@ -153,11 +164,12 @@ class EMCVMAXProvision(object):
             Members=[volumeInstanceName])
 
         if rc != 0L:
-            rc, errordesc = self.utils.wait_for_job_complete(conn, job)
+            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                             extraSpecs)
             if rc != 0L:
                 exceptionMessage = (_(
-                    "Error Create Group: %(groupName)s.  "
-                    "Return code: %(rc)lu.  Error: %(error)s")
+                    "Error Create Group: %(groupName)s. "
+                    "Return code: %(rc)lu.  Error: %(error)s.")
                     % {'groupName': storageGroupName,
                        'rc': rc,
                        'error': errordesc})
@@ -166,7 +178,7 @@ class EMCVMAXProvision(object):
                     data=exceptionMessage)
 
         LOG.debug("InvokeMethod CreateGroup "
-                  "took: %(delta)s H:MM:SS",
+                  "took: %(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
         foundStorageGroupInstanceName = self._find_new_storage_group(
@@ -175,14 +187,15 @@ class EMCVMAXProvision(object):
         return foundStorageGroupInstanceName
 
     def create_storage_group_no_members(
-            self, conn, controllerConfigService, groupName):
+            self, conn, controllerConfigService, groupName, extraSpecs):
         """Create a new storage group that has no members.
 
         :param conn: connection the ecom server
         :param controllerConfigService: the controller configuration service
         :param groupName: the proposed group name
-        :returns: foundStorageGroupInstanceName - the instance Name of
-                                                  the storage group
+        :param extraSpecs: additional info
+        :returns: foundStorageGroupInstanceName
+        :raises: VolumeBackendAPIException
         """
         startTime = time.time()
 
@@ -192,11 +205,12 @@ class EMCVMAXProvision(object):
             DeleteWhenBecomesUnassociated=False)
 
         if rc != 0L:
-            rc, errordesc = self.utils.wait_for_job_complete(conn, job)
+            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                             extraSpecs)
             if rc != 0L:
                 exceptionMessage = (_(
-                    "Error Create Group: %(groupName)s.  "
-                    "Return code: %(rc)lu.  Error: %(error)s")
+                    "Error Create Group: %(groupName)s. "
+                    "Return code: %(rc)lu.  Error: %(error)s.")
                     % {'groupName': groupName,
                        'rc': rc,
                        'error': errordesc})
@@ -205,7 +219,7 @@ class EMCVMAXProvision(object):
                     data=exceptionMessage)
 
         LOG.debug("InvokeMethod CreateGroup "
-                  "took: %(delta)s H:MM:SS",
+                  "took: %(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
 
@@ -234,7 +248,7 @@ class EMCVMAXProvision(object):
 
         :param conn: the ecom connection
         :param jobInstance: the instance of a job
-        :returns: volumeDict - an instance of a volume
+        :returns: dict -- volumeDict - an instance of a volume
         """
         associators = conn.Associators(
             jobInstance,
@@ -252,84 +266,194 @@ class EMCVMAXProvision(object):
         return volumeDict
 
     def remove_device_from_storage_group(
-            self, conn, controllerConfigService, storageGroupInstanceName,
-            volumeInstanceName, volumeName):
+            self, conn, controllerConfigService, sgInstanceName,
+            volumeInstanceName, volumeName, extraSpecs):
         """Remove a volume from a storage group.
 
         :param conn: the connection to the ecom server
         :param controllerConfigService: the controller configuration service
-        :param storageGroupInstanceName: the instance name of the storage group
+        :param sgInstanceName: the instance name of the storage group
         :param volumeInstanceName: the instance name of the volume
         :param volumeName: the volume name (String)
-        :returns: rc - the return code of the job
+        :param extraSpecs: additional info
+        :returns: int -- the return code of the job
         """
-        startTime = time.time()
+        try:
+            storageGroupInstance = conn.GetInstance(sgInstanceName)
+        except Exception:
+            exceptionMessage = (_(
+                "Unable to get the name of the storage group"))
+            LOG.error(exceptionMessage)
+            raise exception.VolumeBackendAPIException(
+                data=exceptionMessage)
 
+        @lockutils.synchronized(storageGroupInstance['ElementName'],
+                                "emc-sg-", True)
+        def do_remove_volume_from_sg():
+            startTime = time.time()
+            return self.remove_volume_from_sg(
+                conn, controllerConfigService, sgInstanceName,
+                volumeInstanceName, volumeName, kwargs, startTime,
+                extraSpecs)
+
+        kwargs = {'retries': 5}
+        return do_remove_volume_from_sg()
+
+    def remove_volume_from_sg(
+            self, conn, controllerConfigService, sgInstanceName,
+            volumeInstanceName, volumeName, kwargs, startTime,
+            extraSpecs):
+        """Remove a volume from a storage group.
+
+        :param conn: the connection to the ecom server
+        :param controllerConfigService: the controller configuration service
+        :param sgInstanceName: the instance name of the storage group
+        :param volumeInstanceName: the instance name of the volume
+        :param volumeName: the volume name (String)
+        :param kwargs: to hold retries
+        :param startTime: the start time of operation
+        :param extraSpecs: additional info
+        :returns: int -- the return code of the job
+        :raises: VolumeBackendAPIException
+        """
         rc, jobDict = conn.InvokeMethod('RemoveMembers',
                                         controllerConfigService,
-                                        MaskingGroup=storageGroupInstanceName,
+                                        MaskingGroup=sgInstanceName,
                                         Members=[volumeInstanceName])
-        if rc != 0L:
-            rc, errorDesc = self.utils.wait_for_job_complete(conn, jobDict)
-            if rc != 0L:
+        if rc != 0:
+            rc, errorDesc = self.utils.wait_for_job_complete(conn, jobDict,
+                                                             extraSpecs)
+            if rc != 0:
                 exceptionMessage = (_(
-                    "Error removing volume %(vol)s. %(error)s")
+                    "Error removing volume %(vol)s. %(error)s.")
                     % {'vol': volumeName, 'error': errorDesc})
                 LOG.error(exceptionMessage)
+                if ("Synchronization Error" in exceptionMessage and
+                        kwargs['retries'] > 0):
+                    retries = kwargs['retries']
+                    kwargs['retries'] = retries - 1
+                    LOG.info(_LI("Retries left: %(retries)s"),
+                             {'retries': kwargs['retries']})
+                    if self.utils.get_storage_group_from_volume(
+                            conn, volumeInstanceName, sgInstanceName):
+                        return self.remove_volume_from_sg(
+                            conn, controllerConfigService, sgInstanceName,
+                            volumeInstanceName, volumeName, kwargs, startTime,
+                            extraSpecs)
+                    else:
+                        return 0
                 raise exception.VolumeBackendAPIException(
                     data=exceptionMessage)
-
         LOG.debug("InvokeMethod RemoveMembers "
-                  "took: %(delta)s H:MM:SS",
+                  "took: %(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
-
         return rc
 
     def add_members_to_masking_group(
             self, conn, controllerConfigService, storageGroupInstanceName,
-            volumeInstanceName, volumeName):
+            volumeInstanceName, volumeName, extraSpecs):
         """Add a member to a masking group group.
+
         :param conn: the connection to the ecom server
         :param controllerConfigService: the controller configuration service
         :param storageGroupInstanceName: the instance name of the storage group
         :param volumeInstanceName: the instance name of the volume
         :param volumeName: the volume name (String)
+        :param extraSpecs: additional info
+        :returns: int -- the return code of the job
         """
-        startTime = time.time()
+        try:
+            storageGroupInstance = conn.GetInstance(storageGroupInstanceName)
+        except Exception:
+            exceptionMessage = (_(
+                "Unable to get the name of the storage group"))
+            LOG.error(exceptionMessage)
+            raise exception.VolumeBackendAPIException(
+                data=exceptionMessage)
 
+        @lockutils.synchronized(storageGroupInstance['ElementName'],
+                                "emc-sg-", True)
+        def do_add_volume_to_sg():
+            startTime = time.time()
+            return self.add_volume_to_sg(
+                conn, controllerConfigService, storageGroupInstanceName,
+                volumeInstanceName, volumeName, kwargs, startTime, extraSpecs)
+
+        kwargs = {'retries': 5}
+        return do_add_volume_to_sg()
+
+    def add_volume_to_sg(
+            self, conn, controllerConfigService, storageGroupInstanceName,
+            volumeInstanceName, volumeName, kwargs, startTime, extraSpecs,
+            checkExist=False):
+        """Add a member to a masking group group.
+
+        :param conn: the connection to the ecom server
+        :param controllerConfigService: the controller configuration service
+        :param storageGroupInstanceName: the instance name of the storage group
+        :param volumeInstanceName: the instance name of the volume
+        :param volumeName: the volume name (String)
+        :param kwargs: to hold retries
+        :param startTime: the start time of operation
+        :param extraSpecs: additional info
+        :returns: int -- the return code of the job
+        :raises: VolumeBackendAPIException
+        """
         rc, job = conn.InvokeMethod(
             'AddMembers', controllerConfigService,
             MaskingGroup=storageGroupInstanceName,
             Members=[volumeInstanceName])
 
-        if rc != 0L:
-            rc, errordesc = self.utils.wait_for_job_complete(conn, job)
-            if rc != 0L:
+        if rc != 0:
+            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                             extraSpecs)
+            if rc != 0:
                 exceptionMessage = (_(
-                    "Error mapping volume %(vol)s. %(error)s")
+                    "Error adding volume %(vol)s. %(error)s.")
                     % {'vol': volumeName, 'error': errordesc})
                 LOG.error(exceptionMessage)
+                if (checkExist and ALREADY_EXISTS in exceptionMessage):
+                    return 0
+                if ("Synchronization Error" in exceptionMessage and
+                        kwargs['retries'] > 0):
+                    retries = kwargs['retries']
+                    kwargs['retries'] = retries - 1
+                    LOG.info(_LI("Retries left: %(retries)s"),
+                             {'retries': kwargs['retries']})
+                    if not self.utils.get_storage_group_from_volume(
+                            conn, volumeInstanceName,
+                            storageGroupInstanceName):
+                        return self.add_volume_to_sg(
+                            conn, controllerConfigService,
+                            storageGroupInstanceName,
+                            volumeInstanceName, volumeName,
+                            kwargs, startTime, extraSpecs, True)
+                    else:
+                        return 0
                 raise exception.VolumeBackendAPIException(
                     data=exceptionMessage)
-
         LOG.debug("InvokeMethod AddMembers "
-                  "took: %(delta)s H:MM:SS",
+                  "took: %(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
+        return rc
 
     def unbind_volume_from_storage_pool(
             self, conn, storageConfigService, poolInstanceName,
-            volumeInstanceName, volumeName):
+            volumeInstanceName, volumeName, extraSpecs):
         """Unbind a volume from a pool and return the unbound volume.
 
         :param conn: the connection information to the ecom server
         :param storageConfigService: the storage configuration service
-                                     instance name
+            instance name
         :param poolInstanceName: the pool instance name
         :param volumeInstanceName: the volume instance name
         :param volumeName: the volume name
-        :returns: unboundVolumeInstance - the unbound volume instance
+        :param extraSpecs: additional info
+        :returns: int -- return code
+        :returns: the job object
+        :raises: VolumeBackendAPIException
         """
         startTime = time.time()
 
@@ -340,17 +464,18 @@ class EMCVMAXProvision(object):
             TheElement=volumeInstanceName)
 
         if rc != 0L:
-            rc, errordesc = self.utils.wait_for_job_complete(conn, job)
+            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                             extraSpecs)
             if rc != 0L:
                 exceptionMessage = (_(
-                    "Error unbinding volume %(vol)s from pool. %(error)s")
+                    "Error unbinding volume %(vol)s from pool. %(error)s.")
                     % {'vol': volumeName, 'error': errordesc})
                 LOG.error(exceptionMessage)
                 raise exception.VolumeBackendAPIException(
                     data=exceptionMessage)
 
         LOG.debug("InvokeMethod EMCUnBindElement "
-                  "took: %(delta)s H:MM:SS",
+                  "took: %(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
 
@@ -358,7 +483,7 @@ class EMCVMAXProvision(object):
 
     def modify_composite_volume(
             self, conn, elementCompositionService, theVolumeInstanceName,
-            inVolumeInstanceName):
+            inVolumeInstanceName, extraSpecs):
 
         """Given a composite volume add a storage volume to it.
 
@@ -366,9 +491,11 @@ class EMCVMAXProvision(object):
         :param elementCompositionService: the element composition service
         :param theVolumeInstanceName: the existing composite volume
         :param inVolumeInstanceName: the volume you wish to add to the
-                                     composite volume
-        :returns: rc - return code
-        :returns: job - job
+            composite volume
+        :param extraSpecs: additional info
+        :returns: int -- rc - return code
+        :returns: the job object
+        :raises: VolumeBackendAPIException
         """
         startTime = time.time()
 
@@ -379,25 +506,26 @@ class EMCVMAXProvision(object):
             InElements=[inVolumeInstanceName])
 
         if rc != 0L:
-            rc, errordesc = self.utils.wait_for_job_complete(conn, job)
+            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                             extraSpecs)
             if rc != 0L:
                 exceptionMessage = (_(
                     "Error adding volume to composite volume. "
-                    "Error is: %(error)s")
+                    "Error is: %(error)s.")
                     % {'error': errordesc})
                 LOG.error(exceptionMessage)
                 raise exception.VolumeBackendAPIException(
                     data=exceptionMessage)
 
         LOG.debug("InvokeMethod CreateOrModifyCompositeElement "
-                  "took: %(delta)s H:MM:SS",
+                  "took: %(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
         return rc, job
 
     def create_composite_volume(
             self, conn, elementCompositionService, volumeSize, volumeName,
-            poolInstanceName, compositeType, numMembers):
+            poolInstanceName, compositeType, numMembers, extraSpecs):
         """Create a new volume using the auto meta feature.
 
         :param conn: the connection the the ecom server
@@ -406,11 +534,13 @@ class EMCVMAXProvision(object):
         :param volumeName: user friendly name
         :param poolInstanceName: the pool to bind the composite volume to
         :param compositeType: the proposed composite type of the volume
-                              e.g striped/concatenated
+            e.g striped/concatenated
         :param numMembers: the number of meta members to make up the composite.
-                           If it is 1 then a non composite is created
-        :returns: rc
-        :returns: errordesc
+            If it is 1 then a non composite is created
+        :param extraSpecs: additional info
+        :returns: dict -- volumeDict
+        :returns: int -- return code
+        :raises: VolumeBackendAPIException
         """
         startTime = time.time()
 
@@ -423,7 +553,7 @@ class EMCVMAXProvision(object):
             "newMembers: %(newMembers)lu "
             "poolInstanceName: %(poolInstanceName)s "
             "compositeType: %(compositeType)lu "
-            "numMembers: %(numMembers)s ",
+            "numMembers: %(numMembers)s.",
             {'elementCompositionService': elementCompositionService,
              'provisioning': THINPROVISIONINGCOMPOSITE,
              'volumeSize': volumeSize,
@@ -443,11 +573,12 @@ class EMCVMAXProvision(object):
             EMCNumberOfMembers=self.utils.get_num(numMembers, '32'))
 
         if rc != 0L:
-            rc, errordesc = self.utils.wait_for_job_complete(conn, job)
+            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                             extraSpecs)
             if rc != 0L:
                 exceptionMessage = (_(
-                    "Error Create Volume: %(volumename)s.  "
-                    "Return code: %(rc)lu.  Error: %(error)s")
+                    "Error Create Volume: %(volumename)s. "
+                    "Return code: %(rc)lu.  Error: %(error)s.")
                     % {'volumename': volumeName,
                        'rc': rc,
                        'error': errordesc})
@@ -456,18 +587,18 @@ class EMCVMAXProvision(object):
                     data=exceptionMessage)
 
         LOG.debug("InvokeMethod CreateOrModifyCompositeElement "
-                  "took: %(delta)s H:MM:SS",
+                  "took: %(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
 
-        # Find the newly created volume
+        # Find the newly created volume.
         volumeDict = self.get_volume_dict_from_job(conn, job['Job'])
 
         return volumeDict, rc
 
     def create_new_composite_volume(
             self, conn, elementCompositionService, compositeHeadInstanceName,
-            compositeMemberInstanceName, compositeType):
+            compositeMemberInstanceName, compositeType, extraSpecs):
         """Creates a new composite volume.
 
         Given a bound composite head and an unbound composite member
@@ -476,11 +607,13 @@ class EMCVMAXProvision(object):
         :param conn: the connection the the ecom server
         :param elementCompositionService: the element composition service
         :param compositeHeadInstanceName: the composite head. This can be bound
-        :param compositeMemberInstanceName: the composite member.
-                                            This must be unbound
+        :param compositeMemberInstanceName: the composite member. This must be
+            unbound
         :param compositeType: the composite type e.g striped or concatenated
-        :returns: rc - return code
-        :returns: errordesc - descriptions of the error
+        :param extraSpecs: additional info
+        :returns: int -- return code
+        :returns: the job object
+        :raises: VolumeBackendAPIException
         """
         startTime = time.time()
 
@@ -492,11 +625,12 @@ class EMCVMAXProvision(object):
             CompositeType=self.utils.get_num(compositeType, '16'))
 
         if rc != 0L:
-            rc, errordesc = self.utils.wait_for_job_complete(conn, job)
+            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                             extraSpecs)
             if rc != 0L:
                 exceptionMessage = (_(
-                    "Error Creating new composite Volume Return code: %(rc)lu."
-                    "Error: %(error)s")
+                    "Error Creating new composite Volume Return code: "
+                    "%(rc)lu. Error: %(error)s.")
                     % {'rc': rc,
                        'error': errordesc})
                 LOG.error(exceptionMessage)
@@ -504,7 +638,7 @@ class EMCVMAXProvision(object):
                     data=exceptionMessage)
 
         LOG.debug("InvokeMethod CreateOrModifyCompositeElement "
-                  "took: %(delta)s H:MM:SS",
+                  "took: %(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
 
@@ -512,15 +646,17 @@ class EMCVMAXProvision(object):
 
     def _migrate_volume(
             self, conn, storageRelocationServiceInstanceName,
-            volumeInstanceName, targetPoolInstanceName):
+            volumeInstanceName, targetPoolInstanceName, extraSpecs):
         """Migrate a volume to another pool.
 
         :param conn: the connection to the ecom server
         :param storageRelocationServiceInstanceName: the storage relocation
-                                                     service
+            service
         :param volumeInstanceName: the volume to be migrated
         :param targetPoolInstanceName: the target pool to migrate the volume to
-        :returns: rc - return code
+        :param extraSpecs: additional info
+        :returns: int -- return code
+        :raises: VolumeBackendAPIException
         """
         startTime = time.time()
 
@@ -531,18 +667,19 @@ class EMCVMAXProvision(object):
             TargetPool=targetPoolInstanceName)
 
         if rc != 0L:
-            rc, errordesc = self.utils.wait_for_job_complete(conn, job)
+            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                             extraSpecs)
             if rc != 0L:
                 exceptionMessage = (_(
                     "Error Migrating volume from one pool to another. "
-                    "Return code: %(rc)lu.  Error: %(error)s")
+                    "Return code: %(rc)lu.  Error: %(error)s.")
                     % {'rc': rc,
                        'error': errordesc})
                 LOG.error(exceptionMessage)
                 raise exception.VolumeBackendAPIException(
                     data=exceptionMessage)
         LOG.debug("InvokeMethod RelocateStorageVolumesToStoragePool "
-                  "took: %(delta)s H:MM:SS",
+                  "took: %(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
 
@@ -550,16 +687,18 @@ class EMCVMAXProvision(object):
 
     def migrate_volume_to_storage_pool(
             self, conn, storageRelocationServiceInstanceName,
-            volumeInstanceName, targetPoolInstanceName):
+            volumeInstanceName, targetPoolInstanceName, extraSpecs):
         """Given the storage system name, get the storage relocation service.
 
         :param conn: the connection to the ecom server
         :param storageRelocationServiceInstanceName: the storage relocation
-                                                     service
+            service
         :param volumeInstanceName: the volume to be migrated
         :param targetPoolInstanceName: the target pool to migrate the
-                                       volume to.
-        :returns: rc
+            volume to.
+        :param extraSpecs: additional info
+        :returns: int -- rc, return code
+        :raises: VolumeBackendAPIException
         """
         LOG.debug(
             "Volume instance name is %(volumeInstanceName)s. "
@@ -570,27 +709,28 @@ class EMCVMAXProvision(object):
         try:
             rc = self._migrate_volume(
                 conn, storageRelocationServiceInstanceName,
-                volumeInstanceName, targetPoolInstanceName)
+                volumeInstanceName, targetPoolInstanceName, extraSpecs)
         except Exception as ex:
             if 'source of a migration session' in six.text_type(ex):
                 try:
                     rc = self._terminate_migrate_session(
-                        conn, volumeInstanceName)
+                        conn, volumeInstanceName, extraSpecs)
                 except Exception as ex:
-                    LOG.error(_LE('Exception: %s'), ex)
+                    LOG.error(_LE('Exception: %s.'), ex)
                     exceptionMessage = (_(
-                        "Failed to terminate migrate session"))
+                        "Failed to terminate migrate session."))
                     LOG.error(exceptionMessage)
                     raise exception.VolumeBackendAPIException(
                         data=exceptionMessage)
                 try:
                     rc = self._migrate_volume(
                         conn, storageRelocationServiceInstanceName,
-                        volumeInstanceName, targetPoolInstanceName)
+                        volumeInstanceName, targetPoolInstanceName,
+                        extraSpecs)
                 except Exception as ex:
                     LOG.error(_LE('Exception: %s'), ex)
                     exceptionMessage = (_(
-                        "Failed to migrate volume for the second time"))
+                        "Failed to migrate volume for the second time."))
                     LOG.error(exceptionMessage)
                     raise exception.VolumeBackendAPIException(
                         data=exceptionMessage)
@@ -598,19 +738,22 @@ class EMCVMAXProvision(object):
             else:
                 LOG.error(_LE('Exception: %s'), ex)
                 exceptionMessage = (_(
-                    "Failed to migrate volume for the first time"))
+                    "Failed to migrate volume for the first time."))
                 LOG.error(exceptionMessage)
                 raise exception.VolumeBackendAPIException(
                     data=exceptionMessage)
 
         return rc
 
-    def _terminate_migrate_session(self, conn, volumeInstanceName):
+    def _terminate_migrate_session(self, conn, volumeInstanceName,
+                                   extraSpecs):
         """Given the volume instance terminate a migrate session.
 
         :param conn: the connection to the ecom server
         :param volumeInstanceName: the volume to be migrated
-        :returns: rc
+        :param extraSpecs: additional info
+        :returns: int -- return code
+        :raises: VolumeBackendAPIException
         """
         startTime = time.time()
 
@@ -618,11 +761,12 @@ class EMCVMAXProvision(object):
             'RequestStateChange', volumeInstanceName,
             RequestedState=self.utils.get_num(32769, '16'))
         if rc != 0L:
-            rc, errordesc = self.utils.wait_for_job_complete(conn, job)
+            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                             extraSpecs)
             if rc != 0L:
                 exceptionMessage = (_(
                     "Error Terminating migrate session. "
-                    "Return code: %(rc)lu.  Error: %(error)s")
+                    "Return code: %(rc)lu.  Error: %(error)s.")
                     % {'rc': rc,
                        'error': errordesc})
                 LOG.error(exceptionMessage)
@@ -630,7 +774,7 @@ class EMCVMAXProvision(object):
                     data=exceptionMessage)
 
         LOG.debug("InvokeMethod RequestStateChange "
-                  "took: %(delta)s H:MM:SS",
+                  "took: %(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
 
@@ -638,67 +782,26 @@ class EMCVMAXProvision(object):
 
     def create_element_replica(
             self, conn, repServiceInstanceName, cloneName,
-            sourceName, sourceInstance, targetInstance, copyOnWrite=False):
-        """Make SMI-S call to create replica for source element
+            sourceName, sourceInstance, targetInstance, extraSpecs,
+            copyOnWrite=False):
+        """Make SMI-S call to create replica for source element.
 
-        :param conn - the connection to the ecom server
-        :param repServiceInstanceName - replication service
-        :param cloneName - replica name
-        :param sourceName - source volume name
-        :param sourceInstance - source volume instance
-
-        :returns: rc - return code
-        :returns: job - job object of the replica creation operation
+        :param conn: the connection to the ecom server
+        :param repServiceInstanceName: replication service
+        :param cloneName: replica name
+        :param sourceName: source volume name
+        :param sourceInstance: source volume instance
+        :param targetInstance: the target instance
+        :param extraSpecs: additional info
+        :param copyOnWrite: optional
+        :returns: int -- return code
+        :returns: job object of the replica creation operation
+        :raises: VolumeBackendAPIException
         """
         if copyOnWrite:
-            startTime = time.time()
-            repServiceCapabilityInstanceNames = conn.AssociatorNames(
-                repServiceInstanceName,
-                ResultClass='CIM_ReplicationServiceCapabilities',
-                AssocClass='CIM_ElementCapabilities')
-            repServiceCapabilityInstanceName = \
-                repServiceCapabilityInstanceNames[0]
-
-            # ReplicationType 10 - Synchronous Clone Local
-            rc, rsd = conn.InvokeMethod(
-                'GetDefaultReplicationSettingData',
-                repServiceCapabilityInstanceName,
-                ReplicationType=self.utils.get_num(10, '16'))
-
-            if rc != 0L:
-                rc, errordesc = self.utils.wait_for_job_complete(conn, rsd)
-                if rc != 0L:
-                    exceptionMessage = (_(
-                        "Error Create Cloned Volume: "
-                        "Volume: %(cloneName)s  Source Volume:"
-                        "%(sourceName)s.  Return code: %(rc)lu."
-                        "Error: %(error)s")
-                        % {'cloneName': cloneName,
-                           'sourceName': sourceName,
-                           'rc': rc,
-                           'error': errordesc})
-                    LOG.error(exceptionMessage)
-                    raise exception.VolumeBackendAPIException(
-                        data=exceptionMessage)
-
-            LOG.debug("InvokeMethod GetDefaultReplicationSettingData "
-                      "took: %(delta)s H:MM:SS",
-                      {'delta': self.utils.get_time_delta(startTime,
-                                                          time.time())})
-
-            # Set DesiredCopyMethodology to Copy-On-Write (6)
-            rsdInstance = rsd['DefaultInstance']
-            rsdInstance['DesiredCopyMethodology'] = self.utils.get_num(6, '16')
-
-            startTime = time.time()
-
-            # SyncType 8 - Clone
-            # ReplicationSettingData.DesiredCopyMethodology  6 - Copy-On-Write
-            rc, job = conn.InvokeMethod(
-                'CreateElementReplica', repServiceInstanceName,
-                ElementName=cloneName, SyncType=self.utils.get_num(8, '16'),
-                ReplicationSettingData=rsdInstance,
-                SourceElement=sourceInstance.path)
+            rc, job, startTime = self._create_replica_copy_on_write(
+                conn, repServiceInstanceName, cloneName, sourceName,
+                sourceInstance, targetInstance, extraSpecs)
         else:
             startTime = time.time()
             if targetInstance is None:
@@ -715,14 +818,15 @@ class EMCVMAXProvision(object):
                     SourceElement=sourceInstance.path,
                     TargetElement=targetInstance.path)
 
-        if rc != 0L:
-            rc, errordesc = self.utils.wait_for_job_complete(conn, job)
-            if rc != 0L:
+        if rc != 0:
+            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                             extraSpecs)
+            if rc != 0:
                 exceptionMessage = (_(
                     "Error Create Cloned Volume: "
                     "Volume: %(cloneName)s  Source Volume:"
-                    "%(sourceName)s.  Return code: %(rc)lu."
-                    "Error: %(error)s")
+                    "%(sourceName)s.  Return code: %(rc)lu. "
+                    "Error: %(error)s.")
                     % {'cloneName': cloneName,
                        'sourceName': sourceName,
                        'rc': rc,
@@ -732,30 +836,109 @@ class EMCVMAXProvision(object):
                     data=exceptionMessage)
 
         LOG.debug("InvokeMethod CreateElementReplica "
-                  "took: %(delta)s H:MM:SS",
+                  "took: %(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
         return rc, job
 
+    def _create_replica_copy_on_write(
+            self, conn, repServiceInstanceName, cloneName, sourceName,
+            sourceInstance, targetInstance, extraSpecs):
+        """Create a replica using copy on write.
+
+        :param conn: the connection to the ecom server
+        :param repServiceInstanceName: instance name of the replication service
+        :param cloneName: replica name
+        :param sourceName: source volume name
+        :param sourceInstance: source volume instance
+        :param targetInstance: the target instance
+        :param extraSpecs: additional info
+        :returns: int -- return code
+        :returns: job object of the replica creation operation
+        :returns: start time
+        """
+        startTime = time.time()
+        repServiceCapabilityInstanceNames = conn.AssociatorNames(
+            repServiceInstanceName,
+            ResultClass='CIM_ReplicationServiceCapabilities',
+            AssocClass='CIM_ElementCapabilities')
+        repServiceCapabilityInstanceName = (
+            repServiceCapabilityInstanceNames[0])
+
+        # ReplicationType 10 - Synchronous Clone Local.
+        rc, rsd = conn.InvokeMethod(
+            'GetDefaultReplicationSettingData',
+            repServiceCapabilityInstanceName,
+            ReplicationType=self.utils.get_num(10, '16'))
+
+        if rc != 0:
+            rc, errordesc = self.utils.wait_for_job_complete(conn, rsd,
+                                                             extraSpecs)
+            if rc != 0:
+                exceptionMessage = (_(
+                    "Error creating cloned volume using "
+                    "Volume: %(cloneName)s, Source Volume: "
+                    "%(sourceName)s. Return code: %(rc)lu. "
+                    "Error: %(error)s.")
+                    % {'cloneName': cloneName,
+                       'sourceName': sourceName,
+                       'rc': rc,
+                       'error': errordesc})
+                LOG.error(exceptionMessage)
+                raise exception.VolumeBackendAPIException(
+                    data=exceptionMessage)
+
+        LOG.debug("InvokeMethod GetDefaultReplicationSettingData "
+                  "took: %(delta)s H:MM:SS.",
+                  {'delta': self.utils.get_time_delta(startTime,
+                                                      time.time())})
+
+        # Set DesiredCopyMethodology to Copy-On-Write (6).
+        rsdInstance = rsd['DefaultInstance']
+        rsdInstance['DesiredCopyMethodology'] = self.utils.get_num(6, '16')
+
+        startTime = time.time()
+
+        # SyncType 8 - Clone.
+        # ReplicationSettingData.DesiredCopyMethodology Copy-On-Write (6).
+        if targetInstance is None:
+            rc, job = conn.InvokeMethod(
+                'CreateElementReplica', repServiceInstanceName,
+                ElementName=cloneName,
+                SyncType=self.utils.get_num(8, '16'),
+                ReplicationSettingData=rsdInstance,
+                SourceElement=sourceInstance.path)
+        else:
+            rc, job = conn.InvokeMethod(
+                'CreateElementReplica', repServiceInstanceName,
+                ElementName=cloneName,
+                SyncType=self.utils.get_num(8, '16'),
+                ReplicationSettingData=rsdInstance,
+                SourceElement=sourceInstance.path,
+                TargetElement=targetInstance.path)
+
+        return rc, job, startTime
+
     def delete_clone_relationship(
-            self, conn, repServiceInstanceName, syncInstanceName, force=False):
+            self, conn, repServiceInstanceName, syncInstanceName, extraSpecs,
+            force=False):
         """Deletes the relationship between the clone and source volume.
 
         Makes an SMI-S call to break clone relationship between the clone
-        volume and the source
+        volume and the source.
+        8/Detach - Delete the synchronization between two storage objects.
+        Treat the objects as independent after the synchronization is deleted.
 
         :param conn: the connection to the ecom server
         :param repServiceInstanceName: instance name of the replication service
         :param syncInstanceName: instance name of the
-                                 SE_StorageSynchronized_SV_SV object
-        :returns: rc - return code
-        :returns: job - job object of the replica creation operation
+            SE_StorageSynchronized_SV_SV object
+        :param extraSpecs: additional info
+        :param force: optional param
+        :returns: int -- return code
+        :returns: job object of the replica creation operation
+        :raises: VolumeBackendAPIException
         """
-
-        '''
-        8/Detach - Delete the synchronization between two storage objects.
-        Treat the objects as independent after the synchronization is deleted.
-        '''
         startTime = time.time()
 
         rc, job = conn.InvokeMethod(
@@ -764,18 +947,19 @@ class EMCVMAXProvision(object):
             Synchronization=syncInstanceName,
             Force=force)
 
-        LOG.debug("Delete clone relationship: Sync Name: %(syncName)s  "
-                  "Return code: %(rc)lu",
+        LOG.debug("Delete clone relationship: Sync Name: %(syncName)s "
+                  "Return code: %(rc)lu.",
                   {'syncName': syncInstanceName,
                    'rc': rc})
 
         if rc != 0L:
-            rc, errordesc = self.utils.wait_for_job_complete(conn, job)
+            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                             extraSpecs)
             if rc != 0L:
                 exceptionMessage = (_(
                     "Error break clone relationship: "
-                    "Sync Name: %(syncName)s  "
-                    "Return code: %(rc)lu.  Error: %(error)s")
+                    "Sync Name: %(syncName)s "
+                    "Return code: %(rc)lu.  Error: %(error)s.")
                     % {'syncName': syncInstanceName,
                        'rc': rc,
                        'error': errordesc})
@@ -784,20 +968,21 @@ class EMCVMAXProvision(object):
                     data=exceptionMessage)
 
         LOG.debug("InvokeMethod ModifyReplicaSynchronization "
-                  "took: %(delta)s H:MM:SS",
+                  "took: %(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
 
         return rc, job
 
     def get_target_endpoints(self, conn, storageHardwareService, hardwareId):
-        """Given the hardwareId get the
+        """Given the hardwareId get the target endpoints.
 
         :param conn: the connection to the ecom server
         :param storageHardwareService: the storage HardwareId Service
         :param hardwareId: the hardware Id
-        :returns: rc
-        :returns: targetendpoints
+        :returns: int -- return code
+        :returns: targetEndpoints
+        :raises: VolumeBackendAPIException
         """
         startTime = time.time()
 
@@ -811,21 +996,23 @@ class EMCVMAXProvision(object):
             raise exception.VolumeBackendAPIException(data=exceptionMessage)
 
         LOG.debug("InvokeMethod EMCGetTargetEndpoints "
-                  "took: %(delta)s H:MM:SS",
+                  "took: %(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
 
         return rc, targetEndpoints
 
     def create_consistency_group(
-            self, conn, replicationService, consistencyGroupName):
-        """Create a new consistency group
+            self, conn, replicationService, consistencyGroupName, extraSpecs):
+        """Create a new consistency group.
 
         :param conn: the connection to the ecom server
         :param replicationService: the replication Service
         :param consistencyGroupName: the CG group name
-        :returns: rc
-        :returns: job
+        :param extraSpecs: additional info
+        :returns: int -- return code
+        :returns: job object
+        :raises: VolumeBackendAPIException
         """
         startTime = time.time()
 
@@ -835,12 +1022,13 @@ class EMCVMAXProvision(object):
             GroupName=consistencyGroupName)
 
         if rc != 0L:
-            rc, errordesc = self.utils.wait_for_job_complete(conn, job)
+            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                             extraSpecs)
             if rc != 0L:
                 exceptionMessage = (_(
                     "Failed to create consistency group: "
                     "%(consistencyGroupName)s  "
-                    "Return code: %(rc)lu.  Error: %(error)s")
+                    "Return code: %(rc)lu.  Error: %(error)s.")
                     % {'consistencyGroupName': consistencyGroupName,
                        'rc': rc,
                        'error': errordesc})
@@ -849,7 +1037,7 @@ class EMCVMAXProvision(object):
                     data=exceptionMessage)
 
         LOG.debug("InvokeMethod CreateGroup "
-                  "took: %(delta)s H:MM:SS",
+                  "took: %(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
 
@@ -857,16 +1045,18 @@ class EMCVMAXProvision(object):
 
     def delete_consistency_group(
             self, conn, replicationService, cgInstanceName,
-            consistencyGroupName):
+            consistencyGroupName, extraSpecs):
 
-        """Delete a consistency group
+        """Delete a consistency group.
 
         :param conn: the connection to the ecom server
         :param replicationService: the replication Service
         :param cgInstanceName: the CG instance name
         :param consistencyGroupName: the CG group name
-        :returns: rc
-        :returns: job
+        :param extraSpecs: additional info
+        :returns: int -- return code
+        :returns: job object
+        :raises: VolumeBackendAPIException
         """
         startTime = time.time()
 
@@ -877,12 +1067,13 @@ class EMCVMAXProvision(object):
             RemoveElements=True)
 
         if rc != 0L:
-            rc, errordesc = self.utils.wait_for_job_complete(conn, job)
+            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                             extraSpecs)
             if rc != 0L:
                 exceptionMessage = (_(
                     "Failed to delete consistency group: "
-                    "%(consistencyGroupName)s  "
-                    "Return code: %(rc)lu.  Error: %(error)s")
+                    "%(consistencyGroupName)s "
+                    "Return code: %(rc)lu. Error: %(error)s.")
                     % {'consistencyGroupName': consistencyGroupName,
                        'rc': rc,
                        'error': errordesc})
@@ -891,7 +1082,7 @@ class EMCVMAXProvision(object):
                     data=exceptionMessage)
 
         LOG.debug("InvokeMethod DeleteGroup "
-                  "took: %(delta)s H:MM:SS",
+                  "took: %(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
 
@@ -899,17 +1090,19 @@ class EMCVMAXProvision(object):
 
     def add_volume_to_cg(
             self, conn, replicationService, cgInstanceName,
-            volumeInstanceName, cgName, volumeName):
-        """Add a volume to a consistency group
+            volumeInstanceName, cgName, volumeName, extraSpecs):
+        """Add a volume to a consistency group.
 
         :param conn: the connection to the ecom server
         :param replicationService: the replication Service
-        :param volumeInstanceName: the volume instance name
         :param cgInstanceName: the CG instance name
+        :param volumeInstanceName: the volume instance name
         :param cgName: the CG group name
         :param volumeName: the volume name
-        :returns: rc
-        :returns: job
+        :param extraSpecs: additional info
+        :returns: int -- return code
+        :returns: job object
+        :raises: VolumeBackendAPIException
         """
         startTime = time.time()
 
@@ -920,12 +1113,13 @@ class EMCVMAXProvision(object):
             ReplicationGroup=cgInstanceName)
 
         if rc != 0L:
-            rc, errordesc = self.utils.wait_for_job_complete(conn, job)
+            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                             extraSpecs)
             if rc != 0L:
                 exceptionMessage = (_(
                     "Failed to add volume %(volumeName)s: "
-                    "to consistency group %(cgName)s  "
-                    "Return code: %(rc)lu.  Error: %(error)s")
+                    "to consistency group %(cgName)s "
+                    "Return code: %(rc)lu.  Error: %(error)s.")
                     % {'volumeName': volumeName,
                        'cgName': cgName,
                        'rc': rc,
@@ -935,24 +1129,26 @@ class EMCVMAXProvision(object):
                     data=exceptionMessage)
 
         LOG.debug("InvokeMethod AddMembers "
-                  "took: %(delta)s H:MM:SS",
+                  "took: %(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
         return rc, job
 
     def remove_volume_from_cg(
             self, conn, replicationService, cgInstanceName,
-            volumeInstanceName, cgName, volumeName):
-        """Remove a volume from a consistency group
+            volumeInstanceName, cgName, volumeName, extraSpecs):
+        """Remove a volume from a consistency group.
 
         :param conn: the connection to the ecom server
         :param replicationService: the replication Service
-        :param volumeInstanceName: the volume instance name
         :param cgInstanceName: the CG instance name
+        :param volumeInstanceName: the volume instance name
         :param cgName: the CG group name
         :param volumeName: the volume name
-        :returns: rc
-        :returns: job
+        :param extraSpecs: additional info
+        :returns: int -- return code
+        :returns: job object
+        :raises: VolumeBackendAPIException
         """
         startTime = time.time()
 
@@ -964,12 +1160,13 @@ class EMCVMAXProvision(object):
             RemoveElements=True)
 
         if rc != 0L:
-            rc, errordesc = self.utils.wait_for_job_complete(conn, job)
+            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                             extraSpecs)
             if rc != 0L:
                 exceptionMessage = (_(
                     "Failed to remove volume %(volumeName)s: "
-                    "to consistency group %(cgName)s  "
-                    "Return code: %(rc)lu.  Error: %(error)s")
+                    "to consistency group %(cgName)s "
+                    "Return code: %(rc)lu.  Error: %(error)s.")
                     % {'volumeName': volumeName,
                        'cgName': cgName,
                        'rc': rc,
@@ -979,36 +1176,38 @@ class EMCVMAXProvision(object):
                     data=exceptionMessage)
 
         LOG.debug("InvokeMethod RemoveMembers "
-                  "took: %(delta)s H:MM:SS",
+                  "took: %(delta)s H:MM:SS.",
                   {'delta': self.utils.get_time_delta(startTime,
                                                       time.time())})
         return rc, job
 
     def create_group_replica(
             self, conn, replicationService,
-            srcGroupInstanceName, tgtGroupInstanceName, relationName):
-        """Make SMI-S call to create replica for source group
+            srcGroupInstanceName, tgtGroupInstanceName, relationName,
+            extraSpecs):
+        """Make SMI-S call to create replica for source group.
 
-        :param conn - the connection to the ecom server
-        :param repServiceInstanceName - replication service
-        :param srcGroupInstanceName - source group instance name
-        :param tgtGroupInstanceName - target group instance name
-        :param cgName - target group name
-
-        :returns: rc - return code
-        :returns: job - job object of the replica creation operation
+        :param conn: the connection to the ecom server
+        :param replicationService: replication service
+        :param srcGroupInstanceName: source group instance name
+        :param tgtGroupInstanceName: target group instance name
+        :param relationName: relation name
+        :param extraSpecs: additional info
+        :returns: int -- return code
+        :returns: job object of the replica creation operation
+        :raises: VolumeBackendAPIException
         """
         LOG.debug(
             "Parameters for CreateGroupReplica: "
-            "replicationService: %(replicationService)s  "
+            "replicationService: %(replicationService)s "
             "RelationName: %(relationName)s "
             "sourceGroup: %(srcGroup)s "
-            "targetGroup: %(tgtGroup)s ",
+            "targetGroup: %(tgtGroup)s.",
             {'replicationService': replicationService,
              'relationName': relationName,
              'srcGroup': srcGroupInstanceName,
              'tgtGroup': tgtGroupInstanceName})
-        # 8 for clone
+        # 8 for clone.
         rc, job = conn.InvokeMethod(
             'CreateGroupReplica',
             replicationService,
@@ -1018,11 +1217,12 @@ class EMCVMAXProvision(object):
             SyncType=self.utils.get_num(8, '16'))
 
         if rc != 0L:
-            rc, errordesc = self.utils.wait_for_job_complete(conn, job)
+            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                             extraSpecs)
             if rc != 0L:
                 exceptionMsg = (_("Error CreateGroupReplica: "
-                                  "source: %(source)s target: %(target)s."
-                                  "Return code: %(rc)lu. Error: %(error)s")
+                                  "source: %(source)s target: %(target)s. "
+                                  "Return code: %(rc)lu. Error: %(error)s.")
                                 % {'source': srcGroupInstanceName,
                                    'target': tgtGroupInstanceName,
                                    'rc': rc,
@@ -1030,3 +1230,40 @@ class EMCVMAXProvision(object):
                 LOG.error(exceptionMsg)
                 raise exception.VolumeBackendAPIException(data=exceptionMsg)
         return rc, job
+
+    def unmap_volume(self, conn, controllerConfigService, targetportids,
+                     lunames, extraSpecs):
+        """Unmaps volume from target port(s).
+
+        :param conn: the connection to the ecom server
+        :param controllerConfigService: inst name of controller service
+        :param targetportids: target port ids
+        :param lunames: list of LUNs
+        :param extraSpecs: additional info
+        :returns: boolean
+        """
+        try:
+            rc, job = conn.InvokeMethod(
+                'EMCMapUnmapVolumes',
+                controllerConfigService,
+                TargetPortIDs=targetportids,
+                LUNames=lunames,
+                Operation=self.utils.get_num(2, '16'),
+                EMCForceOperation=True)
+            if rc != 0L:
+                rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                                 extraSpecs)
+                if rc != 0L:
+                    exceptionMessage = (_(
+                        "Unable to unmap volume(s) from target port(s). "
+                        "Return code: %(rc)lu.  Error: %(error)s")
+                        % {'rc': rc,
+                           'error': errordesc})
+                    LOG.error(exceptionMessage)
+                    return False
+        except Exception as ex:
+            LOG.error(_LE("Exception: %s. Unmap operation was "
+                          "not successful."), six.text_type(ex))
+            return False
+
+        return True

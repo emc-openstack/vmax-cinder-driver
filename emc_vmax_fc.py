@@ -1,4 +1,4 @@
-# Copyright (c) 2014 EMC Corporation.
+# Copyright (c) 2015 EMC Corporation.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -12,10 +12,12 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
+from oslo_log import log as logging
 import six
 
 from cinder import context
-from cinder.openstack.common import log as logging
+from cinder.i18n import _LW
 from cinder.volume import driver
 from cinder.volume.drivers.emc import emc_vmax_common
 from cinder.zonemanager import utils as fczm_utils
@@ -141,7 +143,7 @@ class EMCVMAXFCDriver(driver.FibreChannelDriver):
 
             or
 
-             {
+            {
                 'driver_volume_type': 'fibre_channel'
                 'data': {
                     'target_discovered': True,
@@ -177,18 +179,18 @@ class EMCVMAXFCDriver(driver.FibreChannelDriver):
         if there isn't an initiator_target_map in the
         return of terminate_connection.
 
-        :returns: data - the target_wwns and initiator_target_map if the
-                         zone is to be removed, otherwise empty
+        :param volume: the volume object
+        :param connector: the connector object
+        :returns: dict -- the target_wwns and initiator_target_map if the
+            zone is to be removed, otherwise empty
         """
-        data = {}
+        data = {'driver_volume_type': 'fibre_channel',
+                'data': {}}
         loc = volume['provider_location']
         name = eval(loc)
         storage_system = name['keybindings']['SystemName']
-        LOG.debug("Start FC detach process for volume: %(volume)s",
+        LOG.debug("Start FC detach process for volume: %(volume)s.",
                   {'volume': volume['name']})
-
-        target_wwns, init_targ_map = self._build_initiator_target_map(
-            storage_system, volume, connector)
 
         mvInstanceName = self.common.get_masking_view_by_volume(
             volume, connector)
@@ -198,30 +200,31 @@ class EMCVMAXFCDriver(driver.FibreChannelDriver):
                     mvInstanceName))
 
             LOG.debug("Found port group: %(portGroup)s "
-                      "in masking view %(maskingView)s",
+                      "in masking view %(maskingView)s.",
                       {'portGroup': portGroupInstanceName,
                        'maskingView': mvInstanceName})
 
             self.common.terminate_connection(volume, connector)
 
-            LOG.debug("Looking for masking views still associated with"
-                      "Port Group %s", portGroupInstanceName)
+            LOG.debug("Looking for masking views still associated with "
+                      "Port Group %s.", portGroupInstanceName)
             mvInstances = self.common.get_masking_views_by_port_group(
                 portGroupInstanceName)
             if len(mvInstances) > 0:
                 LOG.debug("Found %(numViews)lu MaskingViews.",
                           {'numViews': len(mvInstances)})
-                data = {'driver_volume_type': 'fibre_channel',
-                        'data': {}}
-            else:  # no views found
+            else:  # No views found.
+                target_wwns, init_targ_map = self._build_initiator_target_map(
+                    storage_system, volume, connector)
                 LOG.debug("No MaskingViews were found. Deleting zone.")
                 data = {'driver_volume_type': 'fibre_channel',
                         'data': {'target_wwn': target_wwns,
                                  'initiator_target_map': init_targ_map}}
-
             LOG.debug("Return FC data for zone removal: %(data)s.",
                       {'data': data})
-
+        else:
+            LOG.warn(_LW("Volume %(volume)s is not in any masking view."),
+                     {'volume': volume['name']})
         return data
 
     def _build_initiator_target_map(self, storage_system, volume, connector):
@@ -241,7 +244,7 @@ class EMCVMAXFCDriver(driver.FibreChannelDriver):
                 target_wwns.extend(map_d['target_port_wwn_list'])
                 for initiator in map_d['initiator_port_wwn_list']:
                     init_targ_map[initiator] = map_d['target_port_wwn_list']
-        else:  # no lookup service, pre-zoned case
+        else:  # No lookup service, pre-zoned case.
             target_wwns = self.common.get_target_wwns(storage_system,
                                                       connector)
             for initiator in initiator_wwns:
@@ -256,7 +259,8 @@ class EMCVMAXFCDriver(driver.FibreChannelDriver):
     def get_volume_stats(self, refresh=False):
         """Get volume stats.
 
-        If 'refresh' is True, run update the stats first.
+        :param refresh: boolean -- If True, run update the stats first.
+        :returns: dict -- the stats dict
         """
         if refresh:
             self.update_volume_stats()
@@ -274,27 +278,25 @@ class EMCVMAXFCDriver(driver.FibreChannelDriver):
     def migrate_volume(self, ctxt, volume, host):
         """Migrate a volume from one Volume Backend to another.
 
-        :param self: reference to class
-        :param ctxt:
+        :param ctxt: context
         :param volume: the volume object including the volume_type_id
         :param host: the host dict holding the relevant target(destination)
-                     information
-        :returns: moved
-        :returns: list
+            information
+        :returns: boolean -- Always returns True
+        :returns: dict -- Empty dict {}
         """
         return self.common.migrate_volume(ctxt, volume, host)
 
     def retype(self, ctxt, volume, new_type, diff, host):
         """Migrate volume to another host using retype.
 
-        :param self: reference to class
-        :param ctxt:
+        :param ctxt: context
         :param volume: the volume object including the volume_type_id
         :param new_type: the new volume type.
+        :param diff: Unused parameter.
         :param host: the host dict holding the relevant
-                     target(destination) information
-        :returns: moved
-        "returns: list
+            target(destination) information
+        :returns: boolean -- True if retype succeeded, False if error
         """
         return self.common.retype(ctxt, volume, new_type, diff, host)
 
