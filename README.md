@@ -88,7 +88,7 @@ relevant license(s), reference eLicensing Support below.
 
 ## eLicensing support
 To activate your entitlements and obtain your VMAX license files, visit the
-Service Center on [EMCâsupport website](https://support.emc.com), as directed on your License
+Service Center on [EMC support website](https://support.emc.com), as directed on your License
 Authorization Code (LAC) letter emailed to you.
 
 *  For help with missing or incorrect entitlements after activation
@@ -110,9 +110,10 @@ Authorization Code (LAC) letter emailed to you.
 ## OpenStack Release Support
 
 This driver package supports the Juno and Kilo releases. Compared to previously released versions, enhancements include:
-*	Support for consistency groups.
-*	Support for live migration.
-*	Use lookup service in FC auto zoning. 
+* Support for VMAX All Flash.
+* Oversubscription
+* Consistency Group
+* iSCSI multipath 
 
 ## Supported Operations
 
@@ -165,31 +166,27 @@ VMAX All Flash and Hybrid:
  |   0.8.4    |  No   |   N/A   |  Yes  |   N/A   |
  |   0.7.0    |  No   |   Yes   |  No   |   Yes   |
 
-.. note::
-
-   On Python2, use the updated distro version, for example:
-
-   .. code-block:: console
+Note:
+On Python2, use the updated distro version, for example:
 
       # apt-get install python-pywbem
 
-.. note::
-
-   On Python3, use the official pywbem version (V0.9.0 or v0.8.4).
+Note:
+ On Python3, use the official pywbem version (V0.9.0 or v0.8.4).
 
 
 Install the *python-pywbem* package for your distributution.
-    * Install for Ubuntu:
+* Install for Ubuntu:
     
-            # apt-get install python-pywbem
+     # apt-get install python-pywbem
 
-    * Install on openSUSE:
+* Install on openSUSE:
     
-            # zypper install python-pywbem
+     # zypper install python-pywbem
             
-    * Install on Red Hat Enterprise Linuxm Centos, and Fedora:
+* Install on Red Hat Enterprise Linuxm Centos, and Fedora:
 
-            # yum install pywbem
+     # yum install pywbem
 
 Install iSCSI Utilities (iSCSI driver only).
 
@@ -198,19 +195,19 @@ Install the *open-iscsi* package.
 
 * Install for Ubuntu:
 
-            # apt-get install open-iscsi
+     # apt-get install open-iscsi
 
-    * Install on openSUSE:
+* Install on openSUSE:
 
-            # zypper install ope-iscsi
+     # zypper install ope-iscsi
 
-    * Install on Red Hat Enterprise Linuxm Centos, and Fedora:
+* Install on Red Hat Enterprise Linuxm Centos, and Fedora:
 
-            # yum install scsi-target-utils.x86_64
+     # yum install scsi-target-utils.x86_64
 
 Enable the iSCSI driver to start automatically.
 
-Download Solutions Enabler with SMI-S from [EMCâsupport website](https://support.emc.com) 
+Download Solutions Enabler with SMI-S from [EMC support website](https://support.emc.com) 
 and install it. Add your VMAX arrays to SMI-S.
 
    You can install SMI-S on a non-OpenStack host. Supported platforms include
@@ -220,8 +217,7 @@ and install it. Add your VMAX arrays to SMI-S.
    SMI-S Provider release notes for more information on supported platforms and
    installation instructions.
 
-   .. note::
-
+Note:
       You must discover storage arrays on the SMI-S server before you can use
       the VMAX drivers. Follow instructions in the SMI-S release notes.
 
@@ -290,7 +286,8 @@ Each enabled backend is configured via parameters contained in an EMC-specific c
 
 Here is an example and description of the contents:
 
-VMAX2
+VMAX2:
+
     <?xml version='1.0' encoding='UTF-8'?>
     <EMC>
        <EcomServerIp>10.108.246.202</EcomServerIp>
@@ -306,7 +303,8 @@ VMAX2
        <FastPolicy>GOLD1</FastPolicy>
     </EMC>
 
-VMAX All Flash and Hybrid
+VMAX All Flash and Hybrid:
+
     <?xml version="1.0" encoding="UTF-8" ?>
        <EMC>
          <EcomServerIp>1.1.1.1</EcomServerIp>
@@ -324,16 +322,16 @@ VMAX All Flash and Hybrid
        </EMC>
 
 
-*EcomServerIp*
+**EcomServerIp**
     IP address of the ECOM server which is packaged with SMI-S.
 
-*EcomServerPort*
+**EcomServerPort**
     Port number of the ECOM server which is packaged with SMI-S.
 
-*EcomUserName* and *EcomPassword*
+**EcomUserName** and **EcomPassword**
     Cedentials for the ECOM server.
 
-*PortGroups*
+**PortGroups**
     Supplies the names of VMAX port groups that have been pre-configured to
     expose volumes managed by this backend. Each supplied port group should
     have sufficient number and distribution of ports (across directors and
@@ -345,28 +343,28 @@ VMAX All Flash and Hybrid
     the PortGroups set contains either all FC or all iSCSI port groups (for a
     given back end), as appropriate for the configured driver (iSCSI or FC).
 
-*Array*
+**Array**
     Unique VMAX array serial number.
 
-*Pool*
+**Pool**
     Unique pool name within a given array. For back ends not using FAST
     automated tiering, the pool is a single pool that has been created by the
     administrator. For back ends exposing FAST policy automated tiering, the
     pool is the bind pool to be used with the FAST policy.
 
-*FastPolicy*
+**FastPolicy**
     VMAX2 only. Name of the FAST Policy to be used. By including this tag,
     volumes managed by this back end are treated as under FAST control.
     Omitting the ``FastPolicy`` tag means FAST is not enabled on the provided
     storage pool.
 
-*SLO*
+**SLO**
     VMAX All Flash and Hybrid only. The Service Level Objective (SLO) that
     manages the underlying storage to provide expected performance. Omitting
     the ``SLO`` tag means that non FAST storage groups will be created instead
     (storage groups not associated with any service level).
 
-*Workload*
+**Workload**
     VMAX All Flash and Hybrid only. When a workload type is added, the latency
     range is reduced due to the added information. Omitting the ``Workload``
     tag means the latency range will be the widest for its SLO type.
@@ -383,6 +381,7 @@ complex and open-zoning would raise security concerns.
    nodes.
 
 Note:
+
    You can only ping the VMAX iSCSI target ports when there is a valid masking
    view. An attach operation creates this masking view.
 
@@ -391,20 +390,20 @@ Note:
 
 ### Masking View Names
 Masking views are dynamically created by the VMAX FC and iSCSI drivers using
-the following naming conventions. *[protocol]* is either *I* for volumes
-attached over iSCSI or *F* for volumes attached over Fiber Channel.
+the following naming conventions. **[protocol]** is either **I** for volumes
+attached over iSCSI or **F** for volumes attached over Fiber Channel.
 
-VMAX2
+VMAX2:
 
-   OS-[shortHostName]-[poolName]-[protocol]-MV
+    OS-[shortHostName]-[poolName]-[protocol]-MV
 
-VMAX2 (where FAST policy is used)
+VMAX2 (where FAST policy is used):
 
-   OS-[shortHostName]-[fastPolicy]-[protocol]-MV
+    OS-[shortHostName]-[fastPolicy]-[protocol]-MV
 
-VMAX All Flash and Hybrid
+VMAX All Flash and Hybrid:
 
-   OS-[shortHostName]-[SRP]-[SLO]-[workload]-[protocol]-MV
+    OS-[shortHostName]-[SRP]-[SLO]-[workload]-[protocol]-MV
 
 ### Initiator Group Names
 For each host that is attached to VMAX volumes using the drivers, an initiator
@@ -412,15 +411,16 @@ group is created or re-used (per attachment type). All initiators of the
 appropriate type known for that host are included in the group. At each new
 attach volume operation, the VMAX driver retrieves the initiators (either WWNNs
 or IQNs) from OpenStack and adds or updates the contents of the Initiator Group
-as required. Names are of the following format. *[protocol]* is either *I*
-for volumes attached over iSCSI or *F* for volumes attached over Fiber
+as required. Names are of the following format. **[protocol]** is either **I**
+for volumes attached over iSCSI or **F** for volumes attached over Fiber
 Channel.
 
-   OS-[shortHostName]-[protocol]-IG
+    OS-[shortHostName]-[protocol]-IG
 
 Note:
-   Hosts attaching to OpenStack managed VMAX storage cannot also attach to
-   storage on the same VMAX that are not managed by OpenStack.
+
+    Hosts attaching to OpenStack managed VMAX storage cannot also attach to
+    storage on the same VMAX that are not managed by OpenStack.
 
 ### FA Port Groups 
 VMAX array FA ports to be used in a new masking view are chosen from the list
@@ -431,20 +431,20 @@ As volumes are attached to a host, they are either added to an existing storage
 group (if it exists) or a new storage group is created and the volume is then
 added. Storage groups contain volumes created from a pool (either single-pool
 or FAST-controlled), attached to a single host, over a single connection type
-(iSCSI or FC). *[protocol]* is either *I* for volumes attached over iSCSI
-or *F* for volumes attached over Fiber Channel.
+(iSCSI or FC). **[protocol]** is either **I** for volumes attached over iSCSI
+or **F** for volumes attached over Fiber Channel.
 
-VMAX2
+VMAX2:
 
-   OS-[shortHostName]-[poolName]-[protocol]-SG
+    OS-[shortHostName]-[poolName]-[protocol]-SG
 
-VMAX2 (where FAST policy is used)
+VMAX2 (where FAST policy is used):
 
-   OS-[shortHostName]-[fastPolicy]-[protocol]-SG
+    OS-[shortHostName]-[fastPolicy]-[protocol]-SG
 
-VMAX All Flash and Hybrid
+VMAX All Flash and Hybrid:
 
-   OS-[shortHostName]-[SRP]-[SLO]-[Workload]-[protocol]-SG
+    OS-[shortHostName]-[SRP]-[SLO]-[Workload]-[protocol]-SG
 
 ## VMAX2 concatenated/Striped volumes
 In order to support later expansion of created volumes, the VMAX Block Storage
@@ -464,29 +464,30 @@ striped volume. The example below means that each volume created under the
 
 ## SSL support
 Note:
-   The ECOM component in Solutions Enabler enforces SSL in 8.3.
-   By default, this port is 5989.
+
+    The ECOM component in Solutions Enabler enforces SSL in 8.3.
+    By default, this port is 5989.
 
 * Get the CA certificate of the ECOM server:
 
-      # openssl s_client -showcerts -connect <ecom_hostname>.lss.emc.com:5989 </dev/null
+        # openssl s_client -showcerts -connect <ecom_hostname>.lss.emc.com:5989 </dev/null
 
 * Copy the pem file to the system certificate directory:
 
-      # cp <ecom_hostname>.lss.emc.com.pem /usr/share/ca-certificates/<ecom_hostname>.lss.emc.com.crt
+        # cp <ecom_hostname>.lss.emc.com.pem /usr/share/ca-certificates/<ecom_hostname>.lss.emc.com.crt
 
 * Update CA certificate database with the following commands
-   (accept defaults):
+  (accept defaults):
 
-      # dpkg-reconfigure ca-certificates
-      # dpkg-reconfigure ca-certificates
+        # dpkg-reconfigure ca-certificates
+        # dpkg-reconfigure ca-certificates
 
 * Update */etc/cinder/cinder.conf* to reflect SSL functionality by
-   adding the following to the back end block:
+  adding the following to the back end block:
 
-      driver_ssl_cert_verify = False
-      driver_use_ssl = True
-      driver_ssl_cert_path = /opt/stack/<ecom_hostname>.lss.emc.com.pem (Optional if Step 3 and 4 are skipped)
+        driver_ssl_cert_verify = False
+        driver_use_ssl = True
+        driver_ssl_cert_path = /opt/stack/<ecom_hostname>.lss.emc.com.pem (Optional if Step 3 and 4 are skipped)
 
 * Update EcomServerIp to ECOM host name and EcomServerPort to secure port
    (5989 by default) in */etc/cinder/cinder_emc_config_<conf_group>.xml*.
@@ -566,24 +567,24 @@ The user defined *max_over_subscription_ratio* is 2.5. Oversubscription is
 
 On Ubuntu:
 
-   # apt-get install open-iscsi           #ensure iSCSI is installed
-   # apt-get install multipath-tools      #multipath modules
-   # apt-get install sysfsutils sg3-utils #file system utilities
-   # apt-get install scsitools            #SCSI tools
+        # apt-get install open-iscsi           #ensure iSCSI is installed
+        # apt-get install multipath-tools      #multipath modules
+        # apt-get install sysfsutils sg3-utils #file system utilities
+        # apt-get install scsitools            #SCSI tools
 
 On openSUSE and SUSE Linux Enterprise Server:
 
-   # zipper install open-iscsi           #ensure iSCSI is installed
-   # zipper install multipath-tools      #multipath modules
-   # zipper install sysfsutils sg3-utils #file system utilities
-   # zipper install scsitools            #SCSI tools
+        # zipper install open-iscsi           #ensure iSCSI is installed
+        # zipper install multipath-tools      #multipath modules
+        # zipper install sysfsutils sg3-utils #file system utilities
+        # zipper install scsitools            #SCSI tools
 
 On Red Hat Enterprise Linux and CentOS:
 
-   # yum install iscsi-initiator-utils   #ensure iSCSI is installed
-   # yum install device-mapper-multipath #multipath modules
-   # yum install sysfsutils sg3-utils    #file system utilities
-   # yum install scsitools               #SCSI tools
+        # yum install iscsi-initiator-utils   #ensure iSCSI is installed
+        # yum install device-mapper-multipath #multipath modules
+        # yum install sysfsutils sg3-utils    #file system utilities
+        # yum install scsitools               #SCSI tools
 
 ### Multipath configuration file
 
@@ -592,60 +593,59 @@ performance. Log in as a privileged user and make the following changes to
 */etc/multipath.conf* on the  Compute (nova) node(s).
 
 
-   devices {
-   # Device attributed for EMC VMAX
-       device {
-               vendor "EMC"
-               product "SYMMETRIX"
-               path_grouping_policy multibus
-               getuid_callout "/lib/udev/scsi_id --page=pre-spc3-83 --whitelisted --device=/dev/%n"
-               path_selector "round-robin 0"
-               path_checker tur
-               features "0"
-               hardware_handler "0"
-               prio const
-               rr_weight uniform
-               no_path_retry 6
-               rr_min_io 1000
-               rr_min_io_rq 1
-       }
-   }
+        devices {
+        # Device attributed for EMC VMAX
+             device {
+                    vendor "EMC"
+                    product "SYMMETRIX"
+                    path_grouping_policy multibus
+                    getuid_callout "/lib/udev/scsi_id --page=pre-spc3-83 --whitelisted --device=/dev/%n"
+                    path_selector "round-robin 0"
+                    path_checker tur
+                    features "0"
+                    hardware_handler "0"
+                    prio const
+                    rr_weight uniform
+                    no_path_retry 6
+                    rr_min_io 1000
+                    rr_min_io_rq 1
+            }
+        } 
 
 You may need to reboot the host after installing the MPIO tools or restart
 iSCSI and multipath services.
 
 On Ubuntu:
 
-   # service open-iscsi restart
-   # service multipath-tools restart
+        # service open-iscsi restart
+        # service multipath-tools restart
 
 On On openSUSE, SUSE Linux Enterprise Server, Red Hat Enterprise Linux, and
 CentOS:
 
+        # systemctl restart open-iscsi
+        # systemctl restart multipath-tools
 
-   # systemctl restart open-iscsi
-   # systemctl restart multipath-tools
 
-
-   $ lsblk
-   NAME                                       MAJ:MIN RM   SIZE RO TYPE  MOUNTPOINT
-   sda                                          8:0    0     1G  0 disk
-   ..360000970000196701868533030303235 (dm-6) 252:6    0     1G  0 mpath
-   sdb                                          8:16   0     1G  0 disk
-   ..360000970000196701868533030303235 (dm-6) 252:6    0     1G  0 mpath
-   vda                                        253:0    0     1T  0 disk
+        $ lsblk
+        NAME                                       MAJ:MIN RM   SIZE RO TYPE  MOUNTPOINT
+        sda                                          8:0    0     1G  0 disk
+        ..360000970000196701868533030303235 (dm-6) 252:6    0     1G  0 mpath
+        sdb                                          8:16   0     1G  0 disk
+        ..360000970000196701868533030303235 (dm-6) 252:6    0     1G  0 mpath
+        vda                                        253:0    0     1T  0 disk
 
 ### OpenStack configurations
 
 On Compute (nova) node, add the following flag in the *[libvirt]* section of
 */etc/nova/nova.conf*:
 
-   iscsi_use_multipath = True
+        iscsi_use_multipath = True
 
 On cinder controller node, set the multipath flag to true in
 */etc/cinder.conf*:
 
-   use_multipath_for_image_xfer = True
+        use_multipath_for_image_xfer = True
 
 Restart *nova-compute* and *cinder-volume* services after the change.
 
@@ -653,28 +653,25 @@ Restart *nova-compute* and *cinder-volume* services after the change.
 
 * Create a 3GB VMAX volume.
 * Create an instance from image out of native LVM storage or from VMAX
-   storage, for example, from a bootable volume
+  storage, for example, from a bootable volume
 * Attach the 3GB volume to the new instance:
 
-   .. code-block:: console
-
-      $ multipath -ll
-      mpath102 (360000970000196700531533030383039) dm-3 EMC,SYMMETRIX
-      size=3G features='1 queue_if_no_path' hwhandler='0' wp=rw
-      '-+- policy='round-robin 0' prio=1 status=active
-      33:0:0:1 sdb 8:16 active ready running
-      '- 34:0:0:1 sdc 8:32 active ready running
+         # multipath -ll
+         mpath102 (360000970000196700531533030383039) dm-3 EMC,SYMMETRIX
+         size=3G features='1 queue_if_no_path' hwhandler='0' wp=rw
+         '-+- policy='round-robin 0' prio=1 status=active
+         33:0:0:1 sdb 8:16 active ready running
+         '- 34:0:0:1 sdc 8:32 active ready running
 
 * Use the *lsblk* command to see the multipath device:
 
-
-      $ lsblk
-      NAME                                       MAJ:MIN RM   SIZE RO TYPE  MOUNTPOINT
-      sdb                                          8:0    0     3G  0 disk
-      ..360000970000196700531533030383039 (dm-6) 252:6    0     3G  0 mpath
-      sdc                                          8:16   0     3G  0 disk
-      ..360000970000196700531533030383039 (dm-6) 252:6    0     3G  0 mpath
-      vda
+         # lsblk
+         NAME                                       MAJ:MIN RM   SIZE RO TYPE  MOUNTPOINT
+         sdb                                          8:0    0     3G  0 disk
+         ..360000970000196700531533030383039 (dm-6) 252:6    0     3G  0 mpath
+         sdc                                          8:16   0     3G  0 disk
+         ..360000970000196700531533030383039 (dm-6) 252:6    0     3G  0 mpath
+         vda
 
 ## Consistency group support
 
@@ -690,73 +687,72 @@ Note:
    Consistency Group which is an SRDF construct. The Storage Group is not
    associated with any FAST policy.
 
-Operations
-----------
+### Operations
 
 * Create a Consistency Group:
 
-     cinder --os-volume-api-version 2 consisgroup-create [--name <name>]
-     [--description <description>] [--availability-zone <availability-zone>]
-     <volume-types>
+      cinder --os-volume-api-version 2 consisgroup-create [--name <name>]
+      [--description <description>] [--availability-zone <availability-zone>]
+      <volume-types>
 
-     $ cinder --os-volume-api-version 2 consisgroup-create --name bronzeCG2 volume_type_1
+          # cinder --os-volume-api-version 2 consisgroup-create --name bronzeCG2 volume_type_1
 
 * List Consistency Groups:
 
-     cinder consisgroup-list [--all-tenants [<0|1>]]
+      cinder consisgroup-list [--all-tenants [<0|1>]]
 
-      $ cinder consisgroup-list
+          # cinder consisgroup-list
 
 * Show a Consistency Group:
 
-     cinder consisgroup-show <consistencygroup>
+      cinder consisgroup-show <consistencygroup>
 
-     $ cinder consisgroup-show 38a604b7-06eb-4202-8651-dbf2610a0827
+          # cinder consisgroup-show 38a604b7-06eb-4202-8651-dbf2610a0827
 
 * Update a consistency Group:
 
-     cinder consisgroup-update [--name <name>] [--description <description>]
-     [--add-volumes <uuid1,uuid2,......>] [--remove-volumes <uuid3,uuid4,......>]
-     <consistencygroup>
+      cinder consisgroup-update [--name <name>] [--description <description>]
+      [--add-volumes <uuid1,uuid2,......>] [--remove-volumes <uuid3,uuid4,......>]
+      <consistencygroup>
 
-Change name:
+      Change name:
 
-     $ cinder consisgroup-update --name updated_name 38a604b7-06eb-4202-8651-dbf2610a0827
+          # cinder consisgroup-update --name updated_name 38a604b7-06eb-4202-8651-dbf2610a0827
 
-  Add volume(s) to a Consistency Group:
+      Add volume(s) to a Consistency Group:
 
-     $ cinder consisgroup-update --add-volumes af1ae89b-564b-4c7f-92d9-c54a2243a5fe 38a604b7-06eb-4202-8651-dbf2610a0827
+          # cinder consisgroup-update --add-volumes af1ae89b-564b-4c7f-92d9-c54a2243a5fe 38a604b7-06eb-4202-8651-dbf2610a0827
 
-  Delete volume(s) from a Consistency Group:
+      Delete volume(s) from a Consistency Group:
 
-     $ cinder consisgroup-update --remove-volumes af1ae89b-564b-4c7f-92d9-c54a2243a5fe 38a604b7-06eb-4202-8651-dbf2610a0827
+          # cinder consisgroup-update --remove-volumes af1ae89b-564b-4c7f-92d9-c54a2243a5fe 38a604b7-06eb-4202-8651-dbf2610a0827
 
 * Create a snapshot of a Consistency Group:
 
-     cinder cgsnapshot-create [--name <name>] [--description <description>]
-     <consistencygroup>
+      cinder cgsnapshot-create [--name <name>] [--description <description>]
+      <consistencygroup>
 
-     $ cinder cgsnapshot-create 618d962d-2917-4cca-a3ee-9699373e6625
+          # cinder cgsnapshot-create 618d962d-2917-4cca-a3ee-9699373e6625
 
 * Delete a snapshot of a Consistency Group:
 
-     cinder cgsnapshot-delete <cgsnapshot> [<cgsnapshot> ...]
+      cinder cgsnapshot-delete <cgsnapshot> [<cgsnapshot> ...]
 
-     $ cinder cgsnapshot-delete 618d962d-2917-4cca-a3ee-9699373e6625
+          # cinder cgsnapshot-delete 618d962d-2917-4cca-a3ee-9699373e6625
 
 * Delete a Consistency Group:
 
-     cinder consisgroup-delete [--force] <consistencygroup> [<consistencygroup> ...]
+      cinder consisgroup-delete [--force] <consistencygroup> [<consistencygroup> ...]
 
-     $ cinder consisgroup-delete --force 618d962d-2917-4cca-a3ee-9699373e6625
+          # cinder consisgroup-delete --force 618d962d-2917-4cca-a3ee-9699373e6625
 
 * You can also create a volume in a consistency group in one step:
 
-     cinder create [--consisgroup-id <consistencygroup-id>] [--name <name>]
-     [--description <description>] [--volume-type <volume-type>]
-     [--availability-zone <availability-zone>] <size>
+      cinder create [--consisgroup-id <consistencygroup-id>] [--name <name>]
+      [--description <description>] [--volume-type <volume-type>]
+      [--availability-zone <availability-zone>] <size>
 
-     $ cinder create --volume-type volume_type_1 --name cgBronzeVol --consisgroup-id 1de80c27-3b2f-47a6-91a7-e867cbe36462 1
+          # cinder create --volume-type volume_type_1 --name cgBronzeVol --consisgroup-id 1de80c27-3b2f-47a6-91a7-e867cbe36462 1
 
 ## Workload Planner (WLP)
 
@@ -796,28 +792,28 @@ After enabling WLP you must then enable SMI-S to gain access to the WLP data:
 2. Navigate to the *Active* menu.
 3. Type *reg* and enter the noted responses to the questions:
 
-      (EMCProvider:5989) ? reg
-      Current list of statistics Access Points: ?
-      Note: The current list will be empty if there are no existing Access Points.
-      Add Statistics Access Point {y|n} [n]: y
-      HostID [l2se0060.lss.emc.com]: ?
-      Note: Enter the Unisphere for VMAX location using a fully qualified Host ID.
-      Port [8443]: ?
-      Note: The Port default is the Unisphere for VMAX default secure port. If the secure port
-      is different for your Unisphere for VMAX setup, adjust this value accordingly.
-      User [smc]: ?
-      Note: Enter the Unisphere for VMAX username.
-      Password [smc]: ?
-      Note: Enter the Unisphere for VMAX password.
+       (EMCProvider:5989) ? reg
+       Current list of statistics Access Points: ?
+       Note: The current list will be empty if there are no existing Access Points.
+       Add Statistics Access Point {y|n} [n]: y
+       HostID [l2se0060.lss.emc.com]: ?
+       Note: Enter the Unisphere for VMAX location using a fully qualified Host ID.
+       Port [8443]: ?
+       Note: The Port default is the Unisphere for VMAX default secure port. If the secure port
+       is different for your Unisphere for VMAX setup, adjust this value accordingly.
+       User [smc]: ?
+       Note: Enter the Unisphere for VMAX username.
+       Password [smc]: ?
+       Note: Enter the Unisphere for VMAX password.
 
 4. Type *reg* again to view the current list:
 
-      (EMCProvider:5988) ? reg
-      Current list of statistics Access Points:
-      HostIDs:
-      l2se0060.lss.emc.com
-      PortNumbers:
-      8443
-      Users:
-      smc
-      Add Statistics Access Point {y|n} [n]: n
+       (EMCProvider:5988) ? reg
+       Current list of statistics Access Points:
+       HostIDs:
+       l2se0060.lss.emc.com
+       PortNumbers:
+       8443
+       Users:
+       smc
+       Add Statistics Access Point {y|n} [n]: n
