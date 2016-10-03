@@ -155,6 +155,7 @@ VMAX All Flash and Hybrid:
 ### Install PyWBEM
 
  |                | Ubuntu14.04(LTS),Ubuntu16.04(LTS),Red Hat Enterprise Linux, CentOS and Fedora |
+ |                |                                       |                                       |
  |                | Python 2                              |Python 3                               |
  | -------------- | :-----------------------------------: | :-----------------------------------: |
  | PyWBEM version | | pip           |       Native        | pip              |        Native      |
