@@ -154,17 +154,14 @@ VMAX All Flash and Hybrid:
 
 ### Install PyWBEM
 
- |  Pywbem    | Ubuntu14.04(LTS),Ubuntu16.04(LTS),|
- |  Version   | Red Hat Enterprise Linux, CentOS  |
- |            | and Fedora                        |
- | ---------- | --------------- | --------------- |
- |            | Python2         | Python3         |
- |            | ----- | ------- | ----- | ------- |
- |            | pip   | Native  | pip   | Native  |
- |------------|-------|---------|-------|---------|
- |   0.9.0    |  No   |   N/A   |  Yes  |   N/A   |
- |   0.8.4    |  No   |   N/A   |  Yes  |   N/A   |
- |   0.7.0    |  No   |   Yes   |  No   |   Yes   |
+ |              | Ubuntu14.04(LTS),Ubuntu16.04(LTS),Red Hat Enterprise Linux, CentOS and Fedora||
+                | Python 2                              |Python 3                               |
+  ------------- | :-----------------------------------: | :-----------------------------------: |
+ PyWBEM version | | pip           |       Native        | pip              |        Native      |
+ | :----------: | :-------------: | :-----------------: | :--------------: | :----------------: |
+ |   0.9.0      |  No             |   N/A               |  Yes             |   N/A              |
+ |   0.8.4      |  No             |   N/A               |  Yes             |   N/A              |
+ |   0.7.0      |  No             |   Yes               |  No              |   Yes              |
 
 Note:
 On Python2, use the updated distro version, for example:
@@ -172,21 +169,22 @@ On Python2, use the updated distro version, for example:
       # apt-get install python-pywbem
 
 Note:
- On Python3, use the official pywbem version (V0.9.0 or v0.8.4).
+
+     On Python3, use the official pywbem version (V0.9.0 or v0.8.4).
 
 
 Install the *python-pywbem* package for your distributution.
 * Install for Ubuntu:
     
-     # apt-get install python-pywbem
+      # apt-get install python-pywbem
 
 * Install on openSUSE:
     
-     # zypper install python-pywbem
+      # zypper install python-pywbem
             
 * Install on Red Hat Enterprise Linuxm Centos, and Fedora:
 
-     # yum install pywbem
+      # yum install pywbem
 
 Install iSCSI Utilities (iSCSI driver only).
 
@@ -195,40 +193,41 @@ Install the *open-iscsi* package.
 
 * Install for Ubuntu:
 
-     # apt-get install open-iscsi
+      # apt-get install open-iscsi
 
 * Install on openSUSE:
 
-     # zypper install ope-iscsi
+      # zypper install ope-iscsi
 
 * Install on Red Hat Enterprise Linuxm Centos, and Fedora:
 
-     # yum install scsi-target-utils.x86_64
+      # yum install scsi-target-utils.x86_64
 
 Enable the iSCSI driver to start automatically.
 
 Download Solutions Enabler with SMI-S from [EMC support website](https://support.emc.com) 
 and install it. Add your VMAX arrays to SMI-S.
 
-   You can install SMI-S on a non-OpenStack host. Supported platforms include
-   different flavors of Windows, Red Hat, and SUSE Linux. SMI-S can be
-   installed on a physical server or a VM hosted by an ESX server. Note that
-   the supported hypervisor for a VM running SMI-S is ESX only. See the EMC
-   SMI-S Provider release notes for more information on supported platforms and
-   installation instructions.
+You can install SMI-S on a non-OpenStack host. Supported platforms include
+different flavors of Windows, Red Hat, and SUSE Linux. SMI-S can be
+installed on a physical server or a VM hosted by an ESX server. Note that
+the supported hypervisor for a VM running SMI-S is ESX only. See the EMC
+SMI-S Provider release notes for more information on supported platforms and
+installation instructions.
 
 Note:
+
       You must discover storage arrays on the SMI-S server before you can use
       the VMAX drivers. Follow instructions in the SMI-S release notes.
 
-   SMI-S is usually installed at */opt/emc/ECIM/ECOM/bin* on Linux and
-   *C:\Program Files\EMC\ECIM\ECOM\bin* on Windows. After you install and
-   configure SMI-S, go to that directory and type *TestSmiProvider.exe*
-   for windows and *./TestSmiProvider* for linux
+SMI-S is usually installed at */opt/emc/ECIM/ECOM/bin* on Linux and
+*C:\Program Files\EMC\ECIM\ECOM\bin* on Windows. After you install and
+configure SMI-S, go to that directory and type *TestSmiProvider.exe*
+for windows and *./TestSmiProvider* for linux
 
-   Use *addsys* in *TestSmiProvider* to add an array. Use *dv* and
-   examine the output after the array is added. Make sure that the arrays are
-   recognized by the SMI-S server before using the EMC VMAX drivers.
+Use *addsys* in *TestSmiProvider* to add an array. Use *dv* and
+examine the output after the array is added. Make sure that the arrays are
+recognized by the SMI-S server before using the EMC VMAX drivers.
 
 ### Verify the EMC VMAX Cinder driver files
 EMC VMAX Drivers provided in the installer package consists of seven python files:
