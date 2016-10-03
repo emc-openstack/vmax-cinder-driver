@@ -382,8 +382,8 @@ complex and open-zoning would raise security concerns.
 
 Note:
 
-   You can only ping the VMAX iSCSI target ports when there is a valid masking
-   view. An attach operation creates this masking view.
+    You can only ping the VMAX iSCSI target ports when there is a valid masking
+    view. An attach operation creates this masking view.
 
 
 ## VMAX Masking View and Group Naming Info
@@ -792,28 +792,28 @@ After enabling WLP you must then enable SMI-S to gain access to the WLP data:
 2. Navigate to the *Active* menu.
 3. Type *reg* and enter the noted responses to the questions:
 
-       (EMCProvider:5989) ? reg
-       Current list of statistics Access Points: ?
-       Note: The current list will be empty if there are no existing Access Points.
-       Add Statistics Access Point {y|n} [n]: y
-       HostID [l2se0060.lss.emc.com]: ?
-       Note: Enter the Unisphere for VMAX location using a fully qualified Host ID.
-       Port [8443]: ?
-       Note: The Port default is the Unisphere for VMAX default secure port. If the secure port
-       is different for your Unisphere for VMAX setup, adjust this value accordingly.
-       User [smc]: ?
-       Note: Enter the Unisphere for VMAX username.
-       Password [smc]: ?
-       Note: Enter the Unisphere for VMAX password.
+           (EMCProvider:5989) ? reg
+           Current list of statistics Access Points: ?
+           Note: The current list will be empty if there are no existing Access Points.
+           Add Statistics Access Point {y|n} [n]: y
+           HostID [l2se0060.lss.emc.com]: ?
+           Note: Enter the Unisphere for VMAX location using a fully qualified Host ID.
+           Port [8443]: ?
+           Note: The Port default is the Unisphere for VMAX default secure port. If the secure port
+           is different for your Unisphere for VMAX setup, adjust this value accordingly.
+           User [smc]: ?
+           Note: Enter the Unisphere for VMAX username.
+           Password [smc]: ?
+           Note: Enter the Unisphere for VMAX password.
 
 4. Type *reg* again to view the current list:
 
-       (EMCProvider:5988) ? reg
-       Current list of statistics Access Points:
-       HostIDs:
-       l2se0060.lss.emc.com
-       PortNumbers:
-       8443
-       Users:
-       smc
-       Add Statistics Access Point {y|n} [n]: n
+           (EMCProvider:5988) ? reg
+           Current list of statistics Access Points:
+           HostIDs:
+           l2se0060.lss.emc.com
+           PortNumbers:
+           8443
+           Users:
+           smc
+           Add Statistics Access Point {y|n} [n]: n
