@@ -161,7 +161,7 @@ Ubuntu14.04(LTS),Ubuntu16.04(LTS),Red Hat Enterprise Linux, CentOS and Fedora:
   -------------  | :-------------: | :-----------------: | :--------------: | :----------------:  |
     0.9.0        |  No             |   N/A               |  Yes             |   N/A               |
     0.8.4        |  No             |   N/A               |  Yes             |   N/A               |
-    0.7.0        |  No             |   Yes               |  No              |   Yes               ||
+    0.7.0        |  No             |   Yes               |  No              |   Yes               |
 
 Note:
 On Python2, use the updated distro version, for example:
