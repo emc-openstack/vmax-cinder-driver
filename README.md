@@ -156,8 +156,7 @@ VMAX All Flash and Hybrid:
 
 Ubuntu14.04(LTS),Ubuntu16.04(LTS),Red Hat Enterprise Linux, CentOS and Fedora:
 
-  |              | Python 2                              | Python 3                              ||
-  PyWBEM version |   pip           |       Native        | pip              |        Native       |
+  PyWBEM version | Python2 pip     | Python2 Native      | Python3 pip      | Python3 Native      |
   -------------  | :-------------: | :-----------------: | :--------------: | :----------------:  |
     0.9.0        |  No             |   N/A               |  Yes             |   N/A               |
     0.8.4        |  No             |   N/A               |  Yes             |   N/A               |
