@@ -242,8 +242,6 @@ class EMCVMAXISCSIDriver(driver.ISCSIDriver):
 
         LOG.info(_LI(
             "ISCSI properties: %(properties)s."), {'properties': properties})
-        LOG.info(_LI(
-            "ISCSI volume is: %(volume)s."), {'volume': volume})
 
         if 'provider_auth' in volume:
             auth = volume['provider_auth']
