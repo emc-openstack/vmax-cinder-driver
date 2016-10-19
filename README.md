@@ -473,42 +473,43 @@ Note:
     The ECOM component in Solutions Enabler enforces SSL in 8.3.
     By default, this port is 5989.
 
-* Get the CA certificate of the ECOM server. This pulls the CA cert file and
-  saves it as .pem file. **my_ecom_host** is the ip address or hostname of the
-  ECOM server. **ca_cert.pem** is the sample name of the .pem:
+1. Get the CA certificate of the ECOM server. This pulls the CA cert file and
+   saves it as .pem file. *my_ecom_host* is the ip address or hostname of the
+   ECOM server. *ca_cert.pem* is the sample name of the .pem:
 
         # openssl s_client -showcerts -connect my_ecom_host:5989 </dev/null 2>/dev/null|openssl x509 -outform PEM >ca_cert.pem
 
-* Copy the pem file to the system certificate directory:
+2.  Copy the pem file to the system certificate directory:
 
         # cp cp ca_cert.pem /usr/share/ca-certificates/ca_cert.crt
 
-* Update CA certificate database with the following commands:
+3. Update CA certificate database with the following commands:
 
         # dpkg-reconfigure ca-certificates
+
 Note:
 
-    Check that the new **ca_cert.crt** is going to be activiated by selecting
-    **ask** on the dialog. If it is not enabled for activation, down/up
-    key to select and space key to enable/disable.
+        Check that the new *ca_cert.crt* is going to be activiated by selecting
+        *ask* on the dialog. If it is not enabled for activation, down/up
+        key to select and space key to enable/disable.
 
         # sudo update-ca-certificates
 
-* Update */etc/cinder/cinder.conf* to reflect SSL functionality by
-  adding the following to the back end block. **my_location** is the location
-  of the .pem file generated in step 1.:
+4. Update */etc/cinder/cinder.conf* to reflect SSL functionality by
+   adding the following to the back end block. *my_location* is the location
+   of the .pem file generated in step 1.:
 
         driver_ssl_cert_verify = False
         driver_use_ssl = True
 
-  If step 2 and 3 are skipped you must add the location of you .pem file.
+   If step 2 and 3 are skipped you must add the location of you .pem file.
 
         driver_ssl_cert_verify = False
         driver_use_ssl = True
         driver_ssl_cert_path = /my_location/ca_cert.pem
 
-* Update EcomServerIp to ECOM host name and EcomServerPort to secure port
-   (5989 by default) in */etc/cinder/cinder_emc_config_<conf_group>.xml*.
+5.  Update EcomServerIp to ECOM host name and EcomServerPort to secure port
+    (5989 by default) in */etc/cinder/cinder_emc_config_<conf_group>.xml*.
 
 ## iSCSI multipathing support
 
