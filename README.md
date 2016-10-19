@@ -484,15 +484,11 @@ Note:
         # cp cp ca_cert.pem /usr/share/ca-certificates/ca_cert.crt
 
 3. Update CA certificate database with the following commands:
+   Check that the new *ca_cert.crt* is going to be activiated by selecting
+   *ask* on the dialog. If it is not enabled for activation, down/up
+   key to select and space key to enable/disable.
 
         # dpkg-reconfigure ca-certificates
-
-Note:
-
-    Check that the new *ca_cert.crt* is going to be activiated by selecting
-    *ask* on the dialog. If it is not enabled for activation, down/up
-    key to select and space key to enable/disable.
-
         # sudo update-ca-certificates
 
 4. Update */etc/cinder/cinder.conf* to reflect SSL functionality by
