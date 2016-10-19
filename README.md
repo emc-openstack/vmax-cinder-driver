@@ -489,9 +489,9 @@ Note:
 
 Note:
 
-        Check that the new *ca_cert.crt* is going to be activiated by selecting
-        *ask* on the dialog. If it is not enabled for activation, down/up
-        key to select and space key to enable/disable.
+    Check that the new *ca_cert.crt* is going to be activiated by selecting
+    *ask* on the dialog. If it is not enabled for activation, down/up
+    key to select and space key to enable/disable.
 
         # sudo update-ca-certificates
 
