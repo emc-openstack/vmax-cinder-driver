@@ -317,17 +317,17 @@ class EMCVMAXMasking(object):
         storageGroupInstanceName = None
         controllerConfigService = maskingViewDict['controllerConfigService']
         sgGroupName = maskingViewDict['sgGroupName']
-        igGroupName = maskingViewDict['igGroupName']
-        connector = maskingViewDict['connector']
-        storageSystemName = maskingViewDict['storageSystemName']
-        maskingViewName = maskingViewDict['maskingViewName']
+        # igGroupName = maskingViewDict['igGroupName']
+        # connector = maskingViewDict['connector']
+        # storageSystemName = maskingViewDict['storageSystemName']
+        # maskingViewName = maskingViewDict['maskingViewName']
 
         # First verify that the initiator group matches the initiators.
         # errorMessage = self._check_existing_initiator_group(
         #    conn, controllerConfigService, maskingViewName,
         #    connector, storageSystemName, igGroupName, extraSpecs)
 
-        #if errorMessage:
+        # if errorMessage:
         #    return storageGroupInstanceName, errorMessage
 
         storageGroupInstanceName, errorMessage = (
@@ -2372,20 +2372,24 @@ class EMCVMAXMasking(object):
                         self.get_initiator_group_from_masking_view(
                             conn, mvInstanceName))
                     LOG.debug("Initiator Group in masking view %(ig)s: "
-                              "IG associated with connector%(igFromConnector)s",
+                              "IG associated with connector "
+                              "%(igFromConnector)s",
                               {'ig': igInstanceName,
-                               'igFromConnector': igInstanceNameFromConnector})
+                               'igFromConnector':
+                                   igInstanceNameFromConnector})
                     if igInstanceName == igInstanceNameFromConnector:
                         if getSG is True:
                             foundInstanceName = sgInstanceName
-                            LOG.debug("Found the storage group associated with "
-                                      "initiator %(initiator)s: %(storageGroup)s",
+                            LOG.debug("Found the storage group associated "
+                                      "with initiator %(initiator)s: "
+                                      "%(storageGroup)s",
                                       {'initiator': initiatorNames,
                                        'storageGroup': foundInstanceName})
                         else:
                             foundInstanceName = mvInstanceName
-                            LOG.debug("Found the masking view associated with "
-                                      "initiator %(initiator)s: %(maskingview)s.",
+                            LOG.debug("Found the masking view associated "
+                                      "with initiator %(initiator)s: "
+                                      "%(maskingview)s.",
                                       {'initiator': initiatorNames,
                                        'maskingview': foundInstanceName})
 
