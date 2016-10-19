@@ -46,6 +46,7 @@ Ensure that there is only one SMI-S (ECOM) server active on the same VMAX
 array.
 
 Support Matrix:
+
   Microcode      | Solutions Enabler | VMAX2               | VMAX3 Hybrid     | VMAX All Flash      |
   -------------  | :---------------: | :-----------------: | :--------------: | :----------------:  |
     5977.250.189 |  SE7.6.2.64       |   Yes               |  No              |   No                |
