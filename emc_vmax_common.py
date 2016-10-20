@@ -4410,7 +4410,7 @@ class EMCVMAXCommon(object):
                                                    ipendpointinstancename)
                 if bool(endpoint):
                     foundipaddresses.append(endpoint)
-            return foundipaddresses
+        return foundipaddresses
 
     def _extend_v3_volume(self, volumeInstance, volumeName, newSize,
                           extraSpecs):
