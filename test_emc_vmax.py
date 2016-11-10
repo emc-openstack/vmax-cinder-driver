@@ -1976,6 +1976,22 @@ class EMCVMAXISCSIDriverNoFastTestCase(test.TestCase):
         self.assertLessEqual(len(maskingViewDict['sgGroupName']), 64)
         self.assertLessEqual(len(maskingViewDict['maskingViewName']), 64)
 
+    def test_populate_masking_dict_v3(self):
+        extraSpecs = {'pool': u'SRP_1',
+                      'volume_backend_name': 'VMAX_ISCSI_BE',
+                      'array': u'1234567891011',
+                      'isV3': True,
+                      'portgroupname': u'OS-portgroup-PG',
+                      'slo': u'Diamond',
+                      'workload':u'DSS'}
+        connector = {'host': 'fakehost'}
+        maskingViewDict = self.driver.common._populate_masking_dict(
+            self.data.test_volume, connector, extraSpecs)
+        self.assertEqual('OS-fakehost-SRP_1-Diamond-DSS-I-SG',
+                         maskingViewDict['sgGroupName'])
+        self.assertEqual('OS-fakehost-SRP_1-Diamond-DSS-I-MV',
+                         maskingViewDict['maskingViewName'])
+
     def test_filter_list(self):
         portgroupnames = ['pg3', 'pg1', 'pg4', 'pg2']
         portgroupnames = (
