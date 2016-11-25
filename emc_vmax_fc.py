@@ -63,9 +63,11 @@ class EMCVMAXFCDriver(driver.FibreChannelDriver):
               - VMAX3 snapvx improvements (bug #1522821)
         2.3.1 - VMAX2/VMAX3 iscsi multipath support (iscsi only)
         2.3.2 - VMAX oversubscription Support (blueprint vmax-oversubscription)
-    """
+        2.3.3 - VMAX Driver - Live Migration for VMAX3 (bug #1587967)
 
-    VERSION = "2.3.2"
+     """
+
+    VERSION = "2.3.3"
 
     def __init__(self, *args, **kwargs):
 

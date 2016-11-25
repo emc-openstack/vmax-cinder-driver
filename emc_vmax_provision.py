@@ -50,7 +50,7 @@ class EMCVMAXProvision(object):
             extraSpecs):
         """Given the volume instance remove it from the pool.
 
-        :param conn: connection the the ecom server
+        :param conn: connection to the ecom server
         :param storageConfigservice: volume created from job
         :param volumeInstanceName: the volume instance name
         :param volumeName: the volume name (String)
@@ -191,7 +191,7 @@ class EMCVMAXProvision(object):
             self, conn, controllerConfigService, groupName, extraSpecs):
         """Create a new storage group that has no members.
 
-        :param conn: connection the ecom server
+        :param conn: connection to the ecom server
         :param controllerConfigService: the controller configuration service
         :param groupName: the proposed group name
         :param extraSpecs: additional info
@@ -233,7 +233,7 @@ class EMCVMAXProvision(object):
             self, conn, maskingGroupDict, storageGroupName):
         """After creating a new storage group find it and return it.
 
-        :param conn: connection the ecom server
+        :param conn: connection to the ecom server
         :param maskingGroupDict: the maskingGroupDict dict
         :param storageGroupName: storage group name (String)
         :returns: maskingGroupDict['MaskingGroup']
@@ -267,13 +267,13 @@ class EMCVMAXProvision(object):
         return volumeDict
 
     def remove_device_from_storage_group(
-            self, conn, controllerConfigService, storageGroupInstanceName,
+            self, conn, controllerConfigService, sgInstanceName,
             volumeInstanceName, volumeName, extraSpecs):
         """Remove a volume from a storage group.
 
         :param conn: the connection to the ecom server
         :param controllerConfigService: the controller configuration service
-        :param storageGroupInstanceName: the instance name of the storage group
+        :param sgInstanceName: the instance name of the storage group
         :param volumeInstanceName: the instance name of the volume
         :param volumeName: the volume name (String)
         :param extraSpecs: additional info
@@ -284,7 +284,7 @@ class EMCVMAXProvision(object):
 
         rc, jobDict = conn.InvokeMethod('RemoveMembers',
                                         controllerConfigService,
-                                        MaskingGroup=storageGroupInstanceName,
+                                        MaskingGroup=sgInstanceName,
                                         Members=[volumeInstanceName])
         if rc != 0:
             rc, errorDesc = self.utils.wait_for_job_complete(conn, jobDict,
@@ -427,7 +427,7 @@ class EMCVMAXProvision(object):
             poolInstanceName, compositeType, numMembers, extraSpecs):
         """Create a new volume using the auto meta feature.
 
-        :param conn: the connection the the ecom server
+        :param conn: connection to the ecom server
         :param elementCompositionService: the element composition service
         :param volumeSize: the size of the volume
         :param volumeName: user friendly name
@@ -503,7 +503,7 @@ class EMCVMAXProvision(object):
         Given a bound composite head and an unbound composite member
         create a new composite volume.
 
-        :param conn: the connection the the ecom server
+        :param conn: connection to the ecom server
         :param elementCompositionService: the element composition service
         :param compositeHeadInstanceName: the composite head. This can be bound
         :param compositeMemberInstanceName: the composite member. This must be

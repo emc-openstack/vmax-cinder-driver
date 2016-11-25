@@ -352,6 +352,16 @@ class EMCVMAXCommon(object):
 
         self._remove_members(configservice, vol_instance, connector,
                              extraSpecs)
+        livemigrationrecord = self.utils.get_live_migration_record(volume,
+                                                                   False)
+        if livemigrationrecord:
+            live_maskingviewdict = livemigrationrecord[0]
+            live_connector = livemigrationrecord[1]
+            live_extraSpecs = livemigrationrecord[2]
+            self._attach_volume(
+                volume, live_connector, live_extraSpecs,
+                live_maskingviewdict, True)
+            self.utils.delete_live_migration_record(volume)
 
     def initialize_connection(self, volume, connector):
         """Initializes the connection and returns device and connection info.
@@ -363,16 +373,19 @@ class EMCVMAXCommon(object):
         maskingview.
 
         The naming convention is the following:
-        initiatorGroupName = OS-<shortHostName>-<shortProtocol>-IG
-                             e.g OS-myShortHost-I-IG
-        storageGroupName = OS-<shortHostName>-<poolName>-<shortProtocol>-SG
-                           e.g OS-myShortHost-SATA_BRONZ1-I-SG
-        portGroupName = OS-<target>-PG  The portGroupName will come from
-                        the EMC configuration xml file.
-                        These are precreated. If the portGroup does not exist
-                        then an error will be returned to the user
-        maskingView  = OS-<shortHostName>-<poolName>-<shortProtocol>-MV
-                       e.g OS-myShortHost-SATA_BRONZ1-I-MV
+
+        .. code-block:: none
+
+         initiatorGroupName = OS-<shortHostName>-<shortProtocol>-IG
+                              e.g OS-myShortHost-I-IG
+         storageGroupName = OS-<shortHostName>-<poolName>-<shortProtocol>-SG
+                            e.g OS-myShortHost-SATA_BRONZ1-I-SG
+         portGroupName = OS-<target>-PG  The portGroupName will come from
+                         the EMC configuration xml file.
+                         These are precreated. If the portGroup does not
+                         exist then an error will be returned to the user
+         maskingView  = OS-<shortHostName>-<poolName>-<shortProtocol>-MV
+                        e.g OS-myShortHost-SATA_BRONZ1-I-MV
 
         :param volume: volume Object
         :param connector: the connector Object
@@ -447,6 +460,8 @@ class EMCVMAXCommon(object):
             volume, connector, extraSpecs)
         if isLiveMigration:
             maskingViewDict['isLiveMigration'] = True
+            self.utils.insert_live_migration_record(volume, maskingViewDict,
+                                                    connector, extraSpecs)
         else:
             maskingViewDict['isLiveMigration'] = False
 
@@ -462,9 +477,9 @@ class EMCVMAXCommon(object):
                       {'vol': volumeName})
             if ((rollbackDict['fastPolicyName'] is not None) or
                     (rollbackDict['isV3'] is not None)):
-                (self.masking
-                    ._check_if_rollback_action_for_masking_required(
-                        self.conn, rollbackDict))
+                (self.masking._check_if_rollback_action_for_masking_required(
+                    self.conn, rollbackDict))
+                self.utils.delete_live_migration_record(volume)
             exception_message = (_("Error Attaching volume %(vol)s.")
                                  % {'vol': volumeName})
             raise exception.VolumeBackendAPIException(
@@ -560,7 +575,7 @@ class EMCVMAXCommon(object):
         Prequisites:
         1. The volume must be composite e.g StorageVolume.EMCIsComposite=True
         2. The volume can only be concatenated
-           e.g StorageExtent.IsConcatenated=True
+        e.g StorageExtent.IsConcatenated=True
 
         :params volume: the volume Object
         :params newSize: the new size to increase the volume to
@@ -1577,16 +1592,16 @@ class EMCVMAXCommon(object):
             host = self.utils.get_host_short_name(host)
             hoststr = ("-%(host)s-"
                        % {'host': host})
-
             for maskedvol in maskedvols:
                 if hoststr.lower() in maskedvol['maskingview'].lower():
                     data = maskedvol
-                    break
             if not data:
-                LOG.warning(_LW(
-                    "Volume is masked but not to host %(host)s as "
-                    "expected. Returning empty dictionary."),
-                    {'host': hoststr})
+                if len(maskedvols) > 0:
+                    data = maskedvols[0]
+                    LOG.warning(_LW(
+                        "Volume is masked but not to host %(host)s as is "
+                        "expected. Assuming live migration."),
+                        {'host': hoststr})
 
         LOG.debug("Device info: %(data)s.", {'data': data})
         return data

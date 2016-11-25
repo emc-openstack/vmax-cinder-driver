@@ -67,9 +67,11 @@ class EMCVMAXISCSIDriver(driver.ISCSIDriver):
               - VMAX3 snapvx improvements (bug #1522821)
         2.3.1 - VMAX2/VMAX3 iscsi multipath support (iscsi only)
         2.3.2 - VMAX oversubscription Support (blueprint vmax-oversubscription)
-    """
+        2.3.3 - VMAX Driver - Live Migration for VMAX3 (bug #1587967)
 
-    VERSION = "2.3.2"
+     """
+
+    VERSION = "2.3.3"    
 
     def __init__(self, *args, **kwargs):
 
@@ -159,7 +161,10 @@ class EMCVMAXISCSIDriver(driver.ISCSIDriver):
 
         The iscsi driver returns a driver_volume_type of 'iscsi'.
         the format of the driver data is defined in smis_get_iscsi_properties.
-        Example return value::
+        Example return value:
+
+        .. code-block:: json
+
             {
                 'driver_volume_type': 'iscsi'
                 'data': {
@@ -372,7 +377,10 @@ class EMCVMAXISCSIDriver(driver.ISCSIDriver):
         return self.common.manage_existing_get_size(volume, external_ref)
 
     def unmanage(self, volume):
-        """Export VMAX volume and leave volume intact on the backend array."""
+        """Export VMAX volume from Cinder.
+
+        Leave the volume intact on the backend array.
+        """
         return self.common.unmanage(volume)
 
     def update_consistencygroup(self, context, group,
