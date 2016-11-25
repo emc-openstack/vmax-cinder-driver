@@ -662,13 +662,21 @@ class EMCVMAXProvisionV3(object):
     def get_srp_pool_stats(self, conn, arrayInfo):
         """Get the totalManagedSpace, remainingManagedSpace.
 
+        Capacity can be got in 2 ways depending on your configuration.
+        1.  The total capacity of the SRP, if you dont have WLP enabled.
+        2.  The SLO capacity, if you do
+
         :param conn: the connection to the ecom server
         :param arrayInfo: the array dict
         :returns: totalCapacityGb
         :returns: remainingCapacityGb
+        :returns: subscribedCapacityGb
+        :returns: array_reserve_percent
         """
         totalCapacityGb = -1
         remainingCapacityGb = -1
+        subscribedCapacityGb = -1
+        array_reserve_percent = -1
         storageSystemInstanceName = self.utils.find_storageSystem(
             conn, arrayInfo['SerialNumber'])
 
@@ -697,13 +705,22 @@ class EMCVMAXProvisionV3(object):
                             remainingCapacityGb = (
                                 self.utils.convert_bits_to_gbs(
                                     remainingManagedSpace))
+                        elif properties[0] == 'EMCSubscribedCapacity':
+                            cimProperties = properties[1]
+                            subscribedManagedSpace = cimProperties.value
+                            subscribedCapacityGb = (
+                                self.utils.convert_bits_to_gbs(
+                                    subscribedManagedSpace))
+                        elif properties[0] == 'EMCPercentReservedCapacity':
+                            cimProperties = properties[1]
+                            array_reserve_percent = int(cimProperties.value)
                 except Exception:
                     pass
                 remainingSLOCapacityGb = (
                     self._get_remaining_slo_capacity_wlp(
                         conn, srpPoolInstanceName, arrayInfo,
                         storageSystemInstanceName['Name']))
-                if remainingSLOCapacityGb != -1:
+                if not remainingSLOCapacityGb == -1:
                     remainingCapacityGb = remainingSLOCapacityGb
                 else:
                     LOG.warning(_LW(
@@ -713,7 +730,8 @@ class EMCVMAXProvisionV3(object):
                         "not be what you expect."),
                         {'remainingCapacityGb': remainingCapacityGb})
 
-        return totalCapacityGb, remainingCapacityGb
+        return (totalCapacityGb, remainingCapacityGb, subscribedCapacityGb,
+                array_reserve_percent)
 
     def _get_remaining_slo_capacity_wlp(self, conn, srpPoolInstanceName,
                                         arrayInfo, systemName):

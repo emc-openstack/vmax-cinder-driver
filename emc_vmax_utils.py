@@ -955,7 +955,8 @@ class EMCVMAXUtils(object):
         :param conn: connection to the ecom server
         :param poolName: string value of the storage pool name
         :param storageSystemName: the storage system name
-        :returns: tuple -- (total_capacity_gb, free_capacity_gb)
+        :returns: tuple -- (total_capacity_gb, free_capacity_gb,
+        provisioned_capacity_gb)
         """
         LOG.debug(
             "Retrieving capacity for pool %(poolName)s on array %(array)s.",
@@ -974,10 +975,17 @@ class EMCVMAXUtils(object):
             poolInstanceName, LocalOnly=False)
         total_capacity_gb = self.convert_bits_to_gbs(
             storagePoolInstance['TotalManagedSpace'])
-        allocated_capacity_gb = self.convert_bits_to_gbs(
+        provisioned_capacity_gb = self.convert_bits_to_gbs(
             storagePoolInstance['EMCSubscribedCapacity'])
-        free_capacity_gb = total_capacity_gb - allocated_capacity_gb
-        return (total_capacity_gb, free_capacity_gb)
+        free_capacity_gb = self.convert_bits_to_gbs(
+            storagePoolInstance['RemainingManagedSpace'])
+        try:
+            array_max_over_subscription = self.get_ratio_from_max_sub_per(
+                storagePoolInstance['EMCMaxSubscriptionPercent'])
+        except KeyError:
+            array_max_over_subscription = 65534
+        return (total_capacity_gb, free_capacity_gb,
+                provisioned_capacity_gb, array_max_over_subscription)
 
     def get_pool_by_name(self, conn, storagePoolName, storageSystemName):
         """Returns the instance name associated with a storage pool name.
@@ -1297,49 +1305,6 @@ class EMCVMAXUtils(object):
                         break
 
         return firmwareVersion
-
-    def get_srp_pool_stats(self, conn, arrayName, poolName):
-        """Get the totalManagedSpace, remainingManagedSpace.
-
-        :param conn: the connection to the ecom server
-        :param arrayName: the array name
-        :param poolName: the pool name
-        :returns: totalCapacityGb
-        :returns: remainingCapacityGb
-        """
-        totalCapacityGb = -1
-        remainingCapacityGb = -1
-        storageSystemInstanceName = self.find_storageSystem(conn, arrayName)
-
-        srpPoolInstanceNames = conn.AssociatorNames(
-            storageSystemInstanceName,
-            ResultClass='Symm_SRPStoragePool')
-
-        for srpPoolInstanceName in srpPoolInstanceNames:
-            poolInstanceID = srpPoolInstanceName['InstanceID']
-            poolnameStr, _systemName = (
-                self.parse_pool_instance_id_v3(poolInstanceID))
-
-            if six.text_type(poolName) == six.text_type(poolnameStr):
-                try:
-                    # Check that pool hasn't suddenly been deleted.
-                    srpPoolInstance = conn.GetInstance(srpPoolInstanceName)
-                    propertiesList = srpPoolInstance.properties.items()
-                    for properties in propertiesList:
-                        if properties[0] == 'TotalManagedSpace':
-                            cimProperties = properties[1]
-                            totalManagedSpace = cimProperties.value
-                            totalCapacityGb = self.convert_bits_to_gbs(
-                                totalManagedSpace)
-                        elif properties[0] == 'RemainingManagedSpace':
-                            cimProperties = properties[1]
-                            remainingManagedSpace = cimProperties.value
-                            remainingCapacityGb = self.convert_bits_to_gbs(
-                                remainingManagedSpace)
-                except Exception:
-                    pass
-
-        return totalCapacityGb, remainingCapacityGb
 
     def isArrayV3(self, conn, arrayName):
         """Check if the array is V2 or V3.
@@ -2602,3 +2567,125 @@ class EMCVMAXUtils(object):
                 cimProperties = properties[1]
                 foundIqn = cimProperties.value
         return foundIqn
+
+    def get_total_cap_bytes(self, storagePoolInstance,
+                            max_oversubscription_ratio):
+        """Get the total capactity in bytes
+
+        This is determined based on a few factors.
+        1. Is the MaxOverSubscriptionRatio set in the XML
+        2. Is the EMCMaxSubscriptionPercent set on the pool
+        3. Whether 1. is greater or less than 2.
+        4. If neither 1. or 2. are set a default ratio is set
+
+        :param storagePoolInstance: the pool instance
+        :param max_oversubscription_ratio: the max over subscription ratio,
+        can be None
+        :returns: total_cap_bytes
+        """
+        max_sub_ratio_from_per = self.get_ratio_from_max_sub_per(
+            storagePoolInstance['EMCMaxSubscriptionPercent'])
+        if max_sub_ratio_from_per:
+            max_over_sub_ratio = (
+                self.override_ratio(max_oversubscription_ratio,
+                                    max_sub_ratio_from_per))
+        total_cap_bytes = storagePoolInstance['TotalManagedSpace']
+        if not max_over_sub_ratio:
+            max_over_sub_ratio = max_oversubscription_ratio
+
+        return self.get_oversubscription_capacity(total_cap_bytes,
+                                                  max_over_sub_ratio)
+
+    def get_ratio_from_max_sub_per(self, max_subscription_percent):
+        """Get ratio from max subscription percent if it exists.
+
+        Check if the max subscription is set on the pool, if it is convert
+        it to a ratio.
+
+        :param max_subscription_percent: max subscription percent
+        :returns: max_over_subscription_ratio
+        """
+        if max_subscription_percent == '0':
+            return None
+        try:
+            max_subscription_percent_int = int(max_subscription_percent)
+        except ValueError:
+            LOG.error(_LE("Cannot convert max subscription percent to int."))
+            return None
+        return float(max_subscription_percent_int) / 100
+
+    def override_ratio(self, max_over_sub_ratio, max_sub_ratio_from_per):
+        """Override ratio if necessary
+
+        The over subscription ratio will be overriden if the max subscription
+        percent is less than the user supplied max oversubscription ratio.
+
+        :param max_over_sub_ratio: user supplied over subscription ratio
+        :param max_sub_ratio_from_per: property on the pool
+        :returns: max_over_sub_ratio
+        """
+        if max_over_sub_ratio:
+            try:
+                max_over_sub_ratio = max(float(max_over_sub_ratio),
+                                         float(max_sub_ratio_from_per))
+            except ValueError:
+                max_over_sub_ratio = float(max_sub_ratio_from_per)
+        elif max_sub_ratio_from_per:
+            max_over_sub_ratio = float(max_sub_ratio_from_per)
+
+        return max_over_sub_ratio
+
+    def get_oversubscription_capacity(self, total_cap_bytes,
+                                      max_over_sub_ratio):
+        """Get the oversubscription capacity in bytes
+
+        :param total_cap_bytes: capacity in byte
+        :param max_over_sub_ratio: max over subscription ratio (float)
+        :returns: over_sub_capacity_bytes
+        """
+        try:
+            mos_ratio = float(max_over_sub_ratio)
+        except ValueError:
+            exceptionMessage = (_("Cannot convert %(maxOverSubRatio)s."
+                                  "Please check your value is in float "
+                                  "format. E.g 2.0")
+                                % {'maxOverSubRatio':
+                                   max_over_sub_ratio})
+            LOG.error(exceptionMessage)
+            raise exception.VolumeBackendAPIException(data=exceptionMessage)
+        try:
+            total_cap_bytes_int = int(total_cap_bytes)
+        except ValueError:
+            exceptionMessage = (_("Cannot convert %(total_cap_bytes)s.")
+                                % {'total_cap_bytes':
+                                   total_cap_bytes})
+            LOG.error(exceptionMessage)
+            raise exception.VolumeBackendAPIException(data=exceptionMessage)
+
+        return mos_ratio * total_cap_bytes_int
+
+    def get_concrete_storage_pool(self, conn, storagePoolInstance):
+        """Get the associated concrete storage Pool instance name.
+
+        Given a virtual storage pool, get the associated concrete storage pool
+
+        :param conn: connection the ecom server
+        :param storagePoolInstance: the storage pool instance name
+        :returns: instance name foundMaskingViewInstanceName
+        """
+        concreteStoragePoolInstanceName = None
+        concreteStoragePoolInstanceNames = conn.AssociatorNames(
+            storagePoolInstance,
+            AssocClass='EMC_ConcreteStoragePool')
+        if len(concreteStoragePoolInstanceNames) == 1:
+            concreteStoragePoolInstanceName = (
+                concreteStoragePoolInstanceNames[0])
+        else:
+            exceptionMessage = (_(
+                "Unable to get concrete Device Storage Pool for Pool "
+                "%(storagePoolInstance)s.")
+                % {'storagePoolInstance': storagePoolInstance})
+            LOG.error(exceptionMessage)
+            raise exception.VolumeBackendAPIException(
+                data=exceptionMessage)
+        return concreteStoragePoolInstanceName

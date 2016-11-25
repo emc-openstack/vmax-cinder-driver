@@ -61,9 +61,11 @@ class EMCVMAXFCDriver(driver.FibreChannelDriver):
               - Getting iscsi ip from port in existing masking view
               - Replacement of EMCGetTargetEndpoints api (bug #1512791)
               - VMAX3 snapvx improvements (bug #1522821)
+        2.3.1 - VMAX2/VMAX3 iscsi multipath support (iscsi only)
+        2.3.2 - VMAX oversubscription Support (blueprint vmax-oversubscription)
     """
 
-    VERSION = "2.3.0"
+    VERSION = "2.3.2"
 
     def __init__(self, *args, **kwargs):
 

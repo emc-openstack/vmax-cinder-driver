@@ -766,3 +766,68 @@ After enabling WLP you must then enable SMI-S to gain access to the WLP data:
            Users:
            smc
            Add Statistics Access Point {y|n} [n]: n
+
+## Oversubscription support
+
+Oversubscription support requires the */etc/cinder/cinder.conf* to be
+updated with two additional tags *max_over_subscription_ratio* and
+*reserved_percentage*. In the sample below, the value of 2.0 for
+*max_over_subscription_ratio* means that the pools in oversubscribed by a
+factor of 2, or 200% oversubscribed. The *reserved_percentage* is the high
+water mark where by the physical remaining space cannot be exceeded.
+For example, if there is only 4% of physical space left and the reserve
+percentage is 5, the free space will equate to zero. This is a safety
+mechanism to prevent a scenario where a provisioning request fails due to
+insufficient raw space.
+
+The parameter *max_over_subscription_ratio* and *reserved_percentage* are
+optional.
+
+To set these parameter go to the configuration group of the volume type in
+**/etc/cinder/cinder.conf**.
+
+    [VMAX_ISCSI_SILVER]
+    cinder_emc_config_file = /etc/cinder/cinder_emc_config_VMAX_ISCSI_SILVER.xml
+    volume_driver = cinder.volume.drivers.emc.emc_vmax_iscsi.EMCVMAXISCSIDriver
+    volume_backend_name = VMAX_ISCSI_SILVER
+    max_over_subscription_ratio = 2.0
+    reserved_percentage = 10
+
+For the second iteration of over subscription, take into account the
+EMCMaxSubscriptionPercent property on the pool. This value is the highest
+that a pool can be oversubscribed.
+
+### Scenario 1
+
+*EMCMaxSubscriptionPercent* is 200 and the user defined
+*max_over_subscription_ratio* is 2.5, the latter is ignored.
+Oversubscription is 200%.
+
+### Scenario 2
+
+*EMCMaxSubscriptionPercent* is 200 and the user defined
+*max_over_subscription_ratio* is 1.5, 1.5 equates to 150% and is less than
+the value set on the pool. Oversubscription is 150%.
+
+### Scenario 3
+
+*EMCMaxSubscriptionPercent* is 0. This means there is no upper limit on the
+pool. The user defined *max_over_subscription_ratio* is 1.5.
+Oversubscription is 150%.
+
+### Scenario 4
+
+*EMCMaxSubscriptionPercent* is 0. *max_over_subscription_ratio* is not
+set by the user. We recommend to default to upper limit, this is 150%.
+
+note:
+    If FAST is set and multiple pools are associated with a FAST policy,
+    then the same rules apply. The difference is, the TotalManagedSpace and
+    EMCSubscribedCapacity for each pool associated with the FAST policy are
+    aggregated.
+
+### Scenario 5
+
+*EMCMaxSubscriptionPercent* is 200 on one pool. It is 300 on another pool.
+The user defined *max_over_subscription_ratio* is 2.5. Oversubscription is
+200% on the first pool and 250% on the other.
