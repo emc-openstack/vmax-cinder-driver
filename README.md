@@ -30,11 +30,13 @@ an ANSI standard for storage management. It supports the VMAX storage system.
 ## System requirements
 The Cinder driver supports both VMAX-2 and VMAX-3 series.
 
-For VMAX-2 series, SMI-S version V4.6.2.29 (Solutions Enabler 7.6.2.67)
-or Solutions Enabler 8.1.2 is required.
+* For VMAX-2 series, SMI-S version V4.6.2.29 (Solutions Enabler 7.6.2.67)
+  or Solutions Enabler 8.1.2 is required.
 
-For VMAX-3 series, Solutions Enabler 8.3 is required. This is SSL only.
-Refer to section below *SSL support*.
+* For VMAX-3 [Hybrid], Solutions Enabler 8.1.2 is required.
+
+* For VMAX-3 [AFA], Solutions Enabler 8.3 is required. This is SSL only.
+  Refer to section below *SSL support*.
 
 When installing Solutions Enabler, make sure you explicitly add the SMI-S
 component.
@@ -47,11 +49,11 @@ array.
 
 Support Matrix:
 
-  Microcode      | Solutions Enabler | VMAX2               | VMAX3 Hybrid     | VMAX All Flash      |
-  -------------  | :---------------: | :-----------------: | :--------------: | :----------------:  |
-    5977.250.189 |  SE7.6.2.64       |   Yes               |  No              |   No                |
-    5977.813.785 |  SE8.1.2          |   Yes               |  Yes             |   No                |
-    5977.944.890 |  SE8.3.0.1        |   No                |  Yes             |   Yes               |
+  Microcode      | Solutions Enabler/SMIS | VMAX2               | VMAX3 Hybrid     | VMAX All Flash      |
+  -------------  | :--------------------: | :-----------------: | :--------------: | :----------------:  |
+    5977.250.189 |  SE7.6.2.64            |   Yes               |  No              |   No                |
+    5977.813.785 |  SE8.1.2               |   Yes               |  Yes             |   No                |
+    5977.944.890 |  SE8.3.0.1             |   No                |  Yes             |   Yes               |
 
 
 ## Required VMAX software suites for OpenStack
@@ -118,11 +120,13 @@ Authorization Code (LAC) letter emailed to you.
 
 ## OpenStack Release Support
 
-This driver package supports the Juno and Kilo releases. Compared to previously released versions, enhancements include:
+In this release additional packages and the following features are supported.
+Compared to previously released versions [OpenStack & EMC Git],
+enhancements include:
 * Support for VMAX All Flash.
 * Oversubscription
 * Consistency Group
-* iSCSI multipath 
+* iSCSI multipath
 
 ## Supported Operations
 
@@ -181,13 +185,13 @@ Note:
 
 Install the *python-pywbem* package for your distributution.
 * Install for Ubuntu:
-    
+
       # apt-get install python-pywbem
 
 * Install on openSUSE:
-    
+
       # zypper install python-pywbem
-            
+
 * Install on Red Hat Enterprise Linuxm Centos, and Fedora:
 
       # yum install pywbem
@@ -211,7 +215,7 @@ Install the *open-iscsi* package.
 
 Enable the iSCSI driver to start automatically.
 
-Download Solutions Enabler with SMI-S from [EMC support website](https://support.emc.com) 
+Download Solutions Enabler with SMI-S from [EMC support website](https://support.emc.com)
 and install it. Add your VMAX arrays to SMI-S.
 
 You can install SMI-S on a non-OpenStack host. Supported platforms include
@@ -259,7 +263,6 @@ The EMC VMAX drivers are written to support multiple types of storage, as config
         enabled_backends=CONF_GROUP_ISCSI, CONF_GROUP_FC
 
         [CONF_GROUP_ISCSI]
-        iscsi_ip_address = 10.10.0.50
         volume_driver=cinder.volume.drivers.emc.emc_vmax_iscsi.EMCVMAXISCSIDriver
         cinder_emc_config_file=/etc/cinder/cinder_emc_config_CONF_GROUP_ISCSI.xml
         volume_backend_name=ISCSI_backend
@@ -269,13 +272,11 @@ The EMC VMAX drivers are written to support multiple types of storage, as config
         cinder_emc_config_file=/etc/cinder/cinder_emc_config_CONF_GROUP_FC.xml
         volume_backend_name=FC_backend
 
- 
-NOTE: iscsi_ip_address is required in an ISCSI configuration.  This is the IP Address of the VMAX iscsi target.
 
 In this example, two backend configuration groups are enabled: CONF_GROUP_ISCSI and CONF_GROUP_FC. Each configuration group has a section describing unique parameters for connections, drivers, the volume_backend_name, and the name of the EMC-specific configuration file containing additional settings. Note that the file name is in the format /etc/cinder/cinder_emc_config_<confGroup>.xml.  See the section below for a description of the file contents.
 
 Once the cinder.conf and EMC-specific configuration files have been created, cinder commands need to be issued in order to create and associate OpenStack volume types with the declared volume_backend_names:
-  
+
         # cinder type-create VMAX_ISCSI
         # cinder type-key VMAX_ISCSI set volume_backend_name=ISCSI_backend
         # cinder type-create VMAX_FC
@@ -308,7 +309,7 @@ VMAX2:
        <FastPolicy>GOLD1</FastPolicy>
     </EMC>
 
-VMAX All Flash and Hybrid:
+VMAX3 [All Flash and Hybrid]:
 
     <?xml version="1.0" encoding="UTF-8" ?>
        <EMC>
@@ -373,8 +374,8 @@ VMAX All Flash and Hybrid:
     VMAX All Flash and Hybrid only. When a workload type is added, the latency
     range is reduced due to the added information. Omitting the ``Workload``
     tag means the latency range will be the widest for its SLO type.
-  
- 
+
+
 
 ### FC Zoning with VMAX
 Zone Manager is required when there is a fabric between the host and array.
@@ -427,7 +428,7 @@ Note:
     Hosts attaching to OpenStack managed VMAX storage cannot also attach to
     storage on the same VMAX that are not managed by OpenStack.
 
-### FA Port Groups 
+### FA Port Groups
 VMAX array FA ports to be used in a new masking view are chosen from the list
 provided in the EMC configuration file.
 
@@ -559,7 +560,7 @@ performance. Log in as a privileged user and make the following changes to
                     rr_min_io 1000
                     rr_min_io_rq 1
             }
-        } 
+        }
 
 You may need to reboot the host after installing the MPIO tools or restart
 iSCSI and multipath services.
