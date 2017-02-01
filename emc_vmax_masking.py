@@ -624,7 +624,6 @@ class EMCVMAXMasking(object):
         :param storageGroupInstanceName: storage group instance name
         :raises: VolumeBackendAPIException
         """
-
         assocVolumeInstanceNames = self.get_devices_from_storage_group(
             conn, storageGroupInstanceName)
         LOG.debug(
@@ -632,10 +631,11 @@ class EMCVMAXMasking(object):
             "before removing volume %(volumeName)s.",
             {'length': len(assocVolumeInstanceNames),
              'volumeName': volumeName})
+        volInstance = conn.GetInstance(volumeInstanceName, LocalOnly=False)
 
-        self.provision.remove_device_from_storage_group(
+        self._remove_volume_from_sg(
             conn, controllerConfigService, storageGroupInstanceName,
-            volumeInstanceName, volumeName, maskingViewDict['extraSpecs'])
+            volInstance, maskingViewDict['extraSpecs'])
 
         assocVolumeInstanceNames = self.get_devices_from_storage_group(
             conn, storageGroupInstanceName)
@@ -1680,26 +1680,33 @@ class EMCVMAXMasking(object):
                 {'volumeName': volumeName})
             return failedRet
 
-        assocVolumeInstanceNames = self.get_devices_from_storage_group(
-            conn, defaultStorageGroupInstanceName)
+        @lockutils.synchronized(
+            defaultStorageGroupInstanceName['ElementName'],
+            "emc-sg-", True)
+        def do_remove_vol_from_sg():
+            assocVolumeInstanceNames = self.get_devices_from_storage_group(
+                conn, defaultStorageGroupInstanceName)
 
-        LOG.debug(
-            "There are %(length)lu associated with the default storage group "
-            "for fast before removing volume %(volumeName)s.",
-            {'length': len(assocVolumeInstanceNames),
-             'volumeName': volumeName})
+            LOG.debug(
+                "There are %(length)lu associated with the default storage "
+                "group for fast before removing volume %(volumeName)s.",
+                {'length': len(assocVolumeInstanceNames),
+                 'volumeName': volumeName})
 
-        self.provision.remove_device_from_storage_group(
-            conn, controllerConfigService, defaultStorageGroupInstanceName,
-            volumeInstanceName, volumeName, extraSpecs)
+            self.provision.remove_device_from_storage_group(
+                conn, controllerConfigService,
+                defaultStorageGroupInstanceName, volumeInstanceName,
+                volumeName, extraSpecs)
 
-        assocVolumeInstanceNames = self.get_devices_from_storage_group(
-            conn, defaultStorageGroupInstanceName)
-        LOG.debug(
-            "There are %(length)lu associated with the default storage group "
-            "for fast after removing volume %(volumeName)s.",
-            {'length': len(assocVolumeInstanceNames),
-             'volumeName': volumeName})
+            assocVolumeInstanceNames = self.get_devices_from_storage_group(
+                conn, defaultStorageGroupInstanceName)
+            LOG.debug(
+                "There are %(length)lu associated with the default storage "
+                "group for fast after removing volume %(volumeName)s.",
+                {'length': len(assocVolumeInstanceNames),
+                 'volumeName': volumeName})
+
+        do_remove_vol_from_sg()
 
         # Required for unit tests.
         emptyStorageGroupInstanceName = (
@@ -1847,28 +1854,75 @@ class EMCVMAXMasking(object):
         instance = conn.GetInstance(storageGroupInstanceName, LocalOnly=False)
         storageGroupName = instance['ElementName']
 
-        volumeInstanceNames = self.get_devices_from_storage_group(
+        mvInstanceName = self.get_masking_view_from_storage_group(
             conn, storageGroupInstanceName)
+        if mvInstanceName is None:
+            LOG.debug("Unable to get masking view %(maskingView)s "
+                      "from storage group.",
+                      {'maskingView': mvInstanceName})
 
-        numVolInStorageGroup = len(volumeInstanceNames)
-        LOG.debug(
-            "There are %(numVol)d volumes in the storage group "
-            "%(maskingGroup)s.",
-            {'numVol': numVolInStorageGroup,
-             'maskingGroup': storageGroupInstanceName})
+            @lockutils.synchronized(storageGroupName, "emc-sg", True)
+            def do_remove_volume_from_sg():
+                volumeInstanceNames = self.get_devices_from_storage_group(
+                    conn, storageGroupInstanceName)
+                numVolInStorageGroup = len(volumeInstanceNames)
+                LOG.debug(
+                    "There are %(numVol)d volumes in the storage group "
+                    "%(maskingGroup)s.",
+                    {'numVol': numVolInStorageGroup,
+                     'maskingGroup': storageGroupInstanceName})
 
-        if numVolInStorageGroup == 1:
-            # Last volume in the storage group.
-            self._last_vol_in_SG(
-                conn, controllerConfigService, storageGroupInstanceName,
-                storageGroupName, volumeInstance,
-                volumeInstance['ElementName'], extraSpecs)
+                if numVolInStorageGroup == 1:
+                    # Last volume in the storage group.
+                    self._last_vol_in_SG(
+                        conn, controllerConfigService,
+                        storageGroupInstanceName,
+                        storageGroupName, volumeInstance,
+                        volumeInstance['ElementName'], extraSpecs)
+                else:
+                    # Not the last volume so remove it from storage group
+                    self._multiple_vols_in_SG(
+                        conn, controllerConfigService,
+                        storageGroupInstanceName, volumeInstance,
+                        volumeInstance['ElementName'],
+                        numVolInStorageGroup, extraSpecs)
+
+            return do_remove_volume_from_sg()
         else:
-            # Not the last volume so remove it from storage group
-            self._multiple_vols_in_SG(
-                conn, controllerConfigService, storageGroupInstanceName,
-                volumeInstance, volumeInstance['ElementName'],
-                numVolInStorageGroup, extraSpecs)
+            # need to lock masking view when we are locking the storage
+            # group to avoid possible deadlock situations from concurrent
+            # processes
+            maskingViewInstance = conn.GetInstance(
+                mvInstanceName, LocalOnly=False)
+            maskingViewName = maskingViewInstance['ElementName']
+
+            @lockutils.synchronized(maskingViewName, "emc-mv-", True)
+            @lockutils.synchronized(storageGroupName, "emc-sg", True)
+            def do_remove_volume_from_sg():
+                volumeInstanceNames = self.get_devices_from_storage_group(
+                    conn, storageGroupInstanceName)
+                numVolInStorageGroup = len(volumeInstanceNames)
+                LOG.debug(
+                    "There are %(numVol)d volumes in the storage group "
+                    "%(maskingGroup)s.",
+                    {'numVol': numVolInStorageGroup,
+                     'maskingGroup': storageGroupInstanceName})
+
+                if numVolInStorageGroup == 1:
+                    # Last volume in the storage group.
+                    self._last_vol_in_SG(
+                        conn, controllerConfigService,
+                        storageGroupInstanceName,
+                        storageGroupName, volumeInstance,
+                        volumeInstance['ElementName'], extraSpecs)
+                else:
+                    # Not the last volume so remove it from storage group
+                    self._multiple_vols_in_SG(
+                        conn, controllerConfigService,
+                        storageGroupInstanceName,
+                        volumeInstance, volumeInstance['ElementName'],
+                        numVolInStorageGroup, extraSpecs)
+            return do_remove_volume_from_sg()
 
     def _last_vol_in_SG(
             self, conn, controllerConfigService, storageGroupInstanceName,
@@ -1899,21 +1953,18 @@ class EMCVMAXMasking(object):
         mvInstanceName = self.get_masking_view_from_storage_group(
             conn, storageGroupInstanceName)
         if mvInstanceName is None:
-            LOG.debug("Unable to get masking view %(maskingView)s "
-                      "from storage group.",
-                      {'maskingView': mvInstanceName})
+            # Remove the volume from the storage group and delete the SG.
+            self._remove_last_vol_and_delete_sg(
+                conn, controllerConfigService,
+                storageGroupInstanceName,
+                storageGroupName, volumeInstance.path,
+                volumeName, extraSpecs)
+            status = True
         else:
             maskingViewInstance = conn.GetInstance(
                 mvInstanceName, LocalOnly=False)
             maskingViewName = maskingViewInstance['ElementName']
 
-        if mvInstanceName:
-            maskingViewInstance = conn.GetInstance(
-                mvInstanceName, LocalOnly=False)
-            maskingViewName = maskingViewInstance['ElementName']
-
-            @lockutils.synchronized(maskingViewName,
-                                    "emc-mv-", True)
             def do_delete_mv_ig_and_sg():
                 return self._delete_mv_ig_and_sg(
                     conn, controllerConfigService, mvInstanceName,
@@ -1921,14 +1972,6 @@ class EMCVMAXMasking(object):
                     storageGroupName, volumeInstance, volumeName,
                     extraSpecs)
             do_delete_mv_ig_and_sg()
-            status = True
-        else:
-            # Remove the volume from the storage group and delete the SG.
-            self._remove_last_vol_and_delete_sg(
-                conn, controllerConfigService,
-                storageGroupInstanceName,
-                storageGroupName, volumeInstance.path,
-                volumeName, extraSpecs)
             status = True
         return status
 
@@ -2670,3 +2713,23 @@ class EMCVMAXMasking(object):
                 LOG.error(_LE(
                     "Cannot get port group name."))
         return portGroupName, errorMessage
+
+    def remove_device_from_storage_group(
+            self, conn, controllerConfigService, storageGroupInstanceName,
+            volumeInstance, volumeName, extraSpecs):
+        """Remove a device from a storage group.
+
+        :param conn: the connection to the ecom server
+        :param controllerConfigService: the controller config service
+        :param storageGroupInstanceName: the sg instance
+        :param volumeInstance: the volume instance
+        :param extraSpecs: the extra specifications
+        :return: do_remove_vol_from_sg()
+        """
+        @lockutils.synchronized(storageGroupInstanceName['ElementName'],
+                                "emc-sg-", True)
+        def do_remove_vol_from_sg():
+            self.provision.remove_device_from_storage_group(
+                conn, controllerConfigService, storageGroupInstanceName,
+                volumeInstance, volumeName, extraSpecs)
+        return do_remove_vol_from_sg()

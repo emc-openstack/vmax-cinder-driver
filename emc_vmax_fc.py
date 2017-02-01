@@ -64,10 +64,11 @@ class EMCVMAXFCDriver(driver.FibreChannelDriver):
         2.3.1 - VMAX2/VMAX3 iscsi multipath support (iscsi only)
         2.3.2 - VMAX oversubscription Support (blueprint vmax-oversubscription)
         2.3.3 - VMAX Driver - Live Migration for VMAX3 (bug #1587967)
+        2.3.4 - additional locking (bug #1630535)(bug #1660374)
 
-     """
+    """
 
-    VERSION = "2.3.3"
+    VERSION = "2.3.4"
 
     def __init__(self, *args, **kwargs):
 
