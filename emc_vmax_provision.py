@@ -14,6 +14,7 @@
 #    under the License.
 import time
 
+from oslo_concurrency import lockutils
 from oslo_log import log as logging
 import six
 
@@ -317,28 +318,43 @@ class EMCVMAXProvision(object):
         :param extraSpecs: additional info
         :raises: VolumeBackendAPIException
         """
-        startTime = time.time()
+        try:
+            storageGroupInstance = conn.GetInstance(storageGroupInstanceName)
+        except Exception:
+            exceptionMessage = (_(
+                "Unable to get the name of the storage group."))
+            LOG.error(exceptionMessage)
+            raise exception.VolumeBackendAPIException(
+                data=exceptionMessage)
 
-        rc, job = conn.InvokeMethod(
-            'AddMembers', controllerConfigService,
-            MaskingGroup=storageGroupInstanceName,
-            Members=[volumeInstanceName])
+        @lockutils.synchronized(storageGroupInstance['ElementName'],
+                                "emc-sg-", True)
+        def do_add_volume_to_sg():
+            startTime = time.time()
+            rc, job = conn.InvokeMethod(
+                'AddMembers', controllerConfigService,
+                MaskingGroup=storageGroupInstanceName,
+                Members=[volumeInstanceName])
 
-        if rc != 0:
-            rc, errordesc = self.utils.wait_for_job_complete(conn, job,
-                                                             extraSpecs)
             if rc != 0:
-                exceptionMessage = (_(
-                    "Error mapping volume %(vol)s. %(error)s.")
-                    % {'vol': volumeName, 'error': errordesc})
-                LOG.error(exceptionMessage)
-                raise exception.VolumeBackendAPIException(
-                    data=exceptionMessage)
+                rc, errordesc = self.utils.wait_for_job_complete(conn, job,
+                                                                 extraSpecs)
+                if rc != 0:
+                    exceptionMessage = (_(
+                        "Error adding volume %(vol)s to %(sg)s. %(error)s.")
+                        % {'vol': volumeName,
+                           'sg': storageGroupInstance['ElementName'],
+                           'error': errordesc})
+                    LOG.error(exceptionMessage)
+                    raise exception.VolumeBackendAPIException(
+                        data=exceptionMessage)
 
-        LOG.debug("InvokeMethod AddMembers "
-                  "took: %(delta)s H:MM:SS.",
-                  {'delta': self.utils.get_time_delta(startTime,
-                                                      time.time())})
+            LOG.debug("InvokeMethod AddMembers "
+                      "took: %(delta)s H:MM:SS.",
+                      {'delta': self.utils.get_time_delta(startTime,
+                                                          time.time())})
+            return rc
+        return do_add_volume_to_sg()
 
     def unbind_volume_from_storage_pool(
             self, conn, storageConfigService,
