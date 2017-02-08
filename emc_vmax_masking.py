@@ -1794,17 +1794,21 @@ class EMCVMAXMasking(object):
         :returns: storageGroupInstanceName
         """
         storageGroupInstanceName = None
-        if connector is not None:
-            storageGroupInstanceName = self._get_sg_associated_with_connector(
-                conn, controllerConfigService, volumeInstance.path,
-                volumeName, connector)
-            if storageGroupInstanceName:
-                self._remove_volume_from_sg(
-                    conn, controllerConfigService, storageGroupInstanceName,
-                    volumeInstance, extraSpecs)
-        else:  # Connector is None in V3 volume deletion case.
+        if extraSpecs[ISV3]:
             self._cleanup_deletion_v3(
                 conn, controllerConfigService, volumeInstance, extraSpecs)
+        else:
+            if connector is not None:
+                storageGroupInstanceName = (
+                    self._get_sg_associated_with_connector(
+                        conn, controllerConfigService, volumeInstance.path,
+                        volumeName, connector))
+                if storageGroupInstanceName:
+                    self._remove_volume_from_sg(
+                        conn, controllerConfigService,
+                        storageGroupInstanceName, volumeInstance, extraSpecs)
+            else:
+                LOG.warning(_LW("Cannot get storage from connector."))
         if reset:
             self._return_back_to_default_sg(
                 conn, controllerConfigService, volumeInstance, volumeName,

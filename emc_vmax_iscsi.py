@@ -69,9 +69,10 @@ class EMCVMAXISCSIDriver(driver.ISCSIDriver):
         2.3.2 - VMAX oversubscription Support (blueprint vmax-oversubscription)
         2.3.3 - VMAX Driver - Live Migration for VMAX3 (bug #1587967)
         2.3.4 - additional locking (bug #1630535)(bug #1660374)
+        2.3.5 - remove_and_reset_members fix
     """
 
-    VERSION = "2.3.4"
+    VERSION = "2.3.5"
 
     def __init__(self, *args, **kwargs):
 
