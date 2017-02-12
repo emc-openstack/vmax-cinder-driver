@@ -66,9 +66,10 @@ class EMCVMAXFCDriver(driver.FibreChannelDriver):
         2.3.3 - VMAX Driver - Live Migration for VMAX3 (bug #1587967)
         2.3.4 - additional locking (bug #1630535)(bug #1660374)
         2.3.5 - remove_and_reset_members fix
+        2.3.6 - copy state fix (bug #1660378)
     """
 
-    VERSION = "2.3.5"
+    VERSION = "2.3.6"
 
     def __init__(self, *args, **kwargs):
 

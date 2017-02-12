@@ -234,7 +234,7 @@ class EMCVMAXProvisionV3(object):
     def create_element_replica(
             self, conn, repServiceInstanceName,
             cloneName, syncType, sourceInstance, extraSpecs,
-            targetInstance=None, rsdInstance=None):
+            copyState=None, targetInstance=None, rsdInstance=None):
         """Make SMI-S call to create replica for source element.
 
         :param conn: the connection to the ecom server
@@ -243,6 +243,7 @@ class EMCVMAXProvisionV3(object):
         :param syncType: 7=snapshot, 8=clone
         :param sourceInstance: source volume instance
         :param extraSpecs: additional info
+        :param copyState: wait for copy state
         :param targetInstance: Target volume instance. Default None
         :param rsdInstance: replication settingdata instance. Default None
         :returns: int -- rc - return code
@@ -284,7 +285,7 @@ class EMCVMAXProvisionV3(object):
                 rc, job = self._create_element_replica_extra_params(
                     conn, repServiceInstanceName, cloneName, syncType,
                     sourceInstance, targetInstance, rsdInstance,
-                    sgInstanceName)
+                    sgInstanceName, copyState)
 
             if rc != 0:
                 rc, errordesc = self.utils.wait_for_job_complete(conn, job,
@@ -310,7 +311,8 @@ class EMCVMAXProvisionV3(object):
 
     def _create_element_replica_extra_params(
             self, conn, repServiceInstanceName, cloneName, syncType,
-            sourceInstance, targetInstance, rsdInstance, sgInstanceName):
+            sourceInstance, targetInstance, rsdInstance, sgInstanceName,
+            copyState):
         """CreateElementReplica using extra parameters.
 
         :param conn: the connection to the ecom server
@@ -321,6 +323,7 @@ class EMCVMAXProvisionV3(object):
         :param targetInstance: Target volume instance. Default None
         :param rsdInstance: replication settingdata instance. Default None
         :param sgInstanceName: pool instance name
+        :param copyState: wait for copy state
         :returns: int -- rc - return code
         :returns: job - job object of the replica creation operation
         """
@@ -339,7 +342,8 @@ class EMCVMAXProvisionV3(object):
                 ElementName=cloneName,
                 SyncType=syncType,
                 SourceElement=sourceInstance.path,
-                TargetElement=targetInstance.path)
+                TargetElement=targetInstance.path,
+                WaitForCopyState=copyState)
         elif rsdInstance:
             rc, job = conn.InvokeMethod(
                 'CreateElementReplica', repServiceInstanceName,
@@ -347,7 +351,8 @@ class EMCVMAXProvisionV3(object):
                 SyncType=syncType,
                 SourceElement=sourceInstance.path,
                 ReplicationSettingData=rsdInstance,
-                Collections=[sgInstanceName])
+                Collections=[sgInstanceName],
+                WaitForCopyState=copyState)
 
         return rc, job
 
