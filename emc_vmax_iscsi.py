@@ -71,9 +71,10 @@ class EMCVMAXISCSIDriver(driver.ISCSIDriver):
         2.3.4 - additional locking (bug #1630535)(bug #1660374)
         2.3.5 - remove_and_reset_members fix
         2.3.6 - copy state fix (bug #1660378)
+        2.3.7 - superfluous debug messages causing error(#1664630)
     """
 
-    VERSION = "2.3.6"
+    VERSION = "2.3.7"
 
     def __init__(self, *args, **kwargs):
 
