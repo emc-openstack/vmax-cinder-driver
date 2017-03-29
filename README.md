@@ -845,11 +845,11 @@ mapped per VMAX ports* is not exceeded
 
 The target MV is in the following format:
 
-    *OS-<targethost>-<SRP>-<SLO>-<workload>-<volid>-MV*
+    OS-<targethost>-<SRP>-<SLO>-<workload>-<volid>-MV
 
 Example:
 
-    *OS-targethost-SRP_1-Diamond-NONE-c0995872-MV*
+    OS-targethost-SRP_1-Diamond-NONE-c0995872-MV
 
 To run Live migration:
 
