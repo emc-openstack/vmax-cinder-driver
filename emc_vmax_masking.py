@@ -89,11 +89,7 @@ class EMCVMAXMasking(object):
         defaultStorageGroupInstanceName = None
         fastPolicyName = None
         storageGroupInstanceName = None
-        if isLiveMigration:
-            maskingViewDict['maskingViewName'] = (
-                maskingViewDict['maskingViewNameLM'])
-            maskingViewName = maskingViewDict['maskingViewNameLM']
-        else:
+        if isLiveMigration is False:
             if isV3:
                 defaultStorageGroupInstanceName = (
                     self._get_v3_default_storagegroup_instancename(
@@ -110,6 +106,11 @@ class EMCVMAXMasking(object):
                             volumeInstance.path,
                             volumeName, fastPolicyName,
                             extraSpecs))
+        else:
+            # Live Migration
+            self.remove_and_reset_members(
+                conn, controllerConfigService, volumeInstance, volumeName,
+                extraSpecs, maskingViewDict['connector'], False)
 
         # If anything has gone wrong with the masking view we rollback
         try:
@@ -117,8 +118,6 @@ class EMCVMAXMasking(object):
                 self._validate_masking_view(conn, maskingViewDict,
                                             defaultStorageGroupInstanceName,
                                             extraSpecs))
-            instance = conn.GetInstance(storageGroupInstanceName)
-            maskingViewDict['sgGroupName'] = instance['ElementName']
             LOG.debug(
                 "The masking view in the attach operation is "
                 "%(maskingViewInstanceName)s. The storage group "
@@ -280,38 +279,17 @@ class EMCVMAXMasking(object):
         maskingViewName = maskingViewDict['maskingViewName']
         pgGroupName = maskingViewDict['pgGroupName']
 
-        if maskingViewDict['isLiveMigration']:
-            try:
-                # We are sharing the storage group and port group
-                # between host and target
-                storageGroupInstanceName = (
-                    maskingViewDict['storageGroupInstanceName'])
-                storageGroupinstance = conn.GetInstance(
-                    storageGroupInstanceName)
-                maskingViewDict['sgGroupName'] = (
-                    storageGroupinstance['ElementName'])
-                portGroupInstanceName = (
-                    maskingViewDict['portGroupInstanceName'])
-                portGroupInstance = conn.GetInstance(
-                    portGroupInstanceName)
-                maskingViewDict['pgGroupName'] = (
-                    portGroupInstance['ElementName'])
-            except Exception:
-                errorMessage = (_(
-                    "Unable to get storage group for live migration."))
-                return None, None, errorMessage
-        else:
-            storageGroupInstanceName, errorMessage = (
-                self._check_storage_group(
-                    conn, maskingViewDict, defaultStorageGroupInstanceName))
-            if errorMessage:
-                return None, storageGroupInstanceName, errorMessage
+        storageGroupInstanceName, errorMessage = (
+            self._check_storage_group(
+                conn, maskingViewDict, defaultStorageGroupInstanceName))
+        if errorMessage:
+            return None, storageGroupInstanceName, errorMessage
 
-            portGroupInstanceName, errorMessage = (
-                self._check_port_group(conn, controllerConfigService,
-                                       pgGroupName))
-            if errorMessage:
-                return None, storageGroupInstanceName, errorMessage
+        portGroupInstanceName, errorMessage = (
+            self._check_port_group(conn, controllerConfigService,
+                                   pgGroupName))
+        if errorMessage:
+            return None, storageGroupInstanceName, errorMessage
 
         initiatorGroupInstanceName, errorMessage = (
             self._check_initiator_group(conn, controllerConfigService,
@@ -352,6 +330,7 @@ class EMCVMAXMasking(object):
         """
         storageGroupInstanceName = None
         controllerConfigService = maskingViewDict['controllerConfigService']
+        sgGroupName = maskingViewDict['sgGroupName']
         igGroupName = maskingViewDict['igGroupName']
         connector = maskingViewDict['connector']
         storageSystemName = maskingViewDict['storageSystemName']
@@ -367,9 +346,10 @@ class EMCVMAXMasking(object):
             if errorMessage:
                 return storageGroupInstanceName, errorMessage
 
-        # Get the storage group from masking view
         storageGroupInstanceName, errorMessage = (
-            self._check_existing_storage_group(conn, maskingViewInstanceName))
+            self._check_existing_storage_group(
+                conn, controllerConfigService, sgGroupName,
+                maskingViewInstanceName))
 
         return storageGroupInstanceName, errorMessage
 
@@ -398,16 +378,19 @@ class EMCVMAXMasking(object):
         return storageGroupInstanceName, msg
 
     def _check_existing_storage_group(
-            self, conn, maskingViewInstanceName):
+            self, conn, controllerConfigService,
+            sgGroupName, maskingViewInstanceName):
         """Check that we can get the existing storage group.
 
         :param conn: the ecom connection
+        :param controllerConfigService: controller configuration service
         :param sgGroupName: the storage group name
         :param maskingViewInstanceName: the masking view instance name
         :returns: storageGroupInstanceName
         :returns: string -- msg, the error message
         """
         msg = None
+
         sgFromMvInstanceName = (
             self._get_storage_group_from_masking_view_instance(
                 conn, maskingViewInstanceName))
@@ -415,9 +398,10 @@ class EMCVMAXMasking(object):
         if sgFromMvInstanceName is None:
             # This may be used in exception hence _ instead of _LE.
             msg = (_(
-                "Cannot get storage group from masking view "
-                "%(maskingViewInstanceName)s. ") %
-                {'maskingViewInstanceName': maskingViewInstanceName})
+                "Cannot get storage group: %(sgGroupName)s "
+                "from masking view %(maskingViewInstanceName)s. ") %
+                {'sgGroupName': sgGroupName,
+                 'maskingViewInstanceName': maskingViewInstanceName})
             LOG.error(msg)
         return sgFromMvInstanceName, msg
 
@@ -1632,33 +1616,16 @@ class EMCVMAXMasking(object):
         foundView = self._find_masking_view(
             conn, maskingViewName, storageSystemName)
         if foundView:
-            foundPortMaskingGroupInstanceName = (
-                self.get_port_group_from_masking_view_instance(
-                    conn, foundView))
+            groups = conn.AssociatorNames(
+                foundView,
+                ResultClass='CIM_TargetMaskingGroup')
+            if len(groups) > 0:
+                foundPortMaskingGroupInstanceName = groups[0]
 
             LOG.debug(
-                "Masking view: %(view)s portMaskingGroup: %(masking)s.",
+                "Masking view: %(view)s InitiatorMaskingGroup: %(masking)s.",
                 {'view': maskingViewName,
                  'masking': foundPortMaskingGroupInstanceName})
-
-        return foundPortMaskingGroupInstanceName
-
-    def get_port_group_from_masking_view_instance(
-            self, conn, maskingViewInstanceName):
-        """Given the masking view name get the port group from it.
-
-        :param conn: connection to the ecom server
-        :param maskingViewInstanceName: the masking view instance name
-        :returns: instance name foundPortMaskingGroupInstanceName
-        """
-
-        foundPortMaskingGroupInstanceName = None
-
-        groups = conn.AssociatorNames(
-            maskingViewInstanceName,
-            ResultClass='CIM_TargetMaskingGroup')
-        if len(groups) > 0:
-            foundPortMaskingGroupInstanceName = groups[0]
 
         return foundPortMaskingGroupInstanceName
 
@@ -1703,11 +1670,14 @@ class EMCVMAXMasking(object):
         :param storageGroupInstanceName: the storage group instance name
         :returns: instance name foundMaskingViewInstanceName
         """
+        foundMaskingViewInstanceName = None
         maskingViews = conn.AssociatorNames(
             storageGroupInstanceName,
             ResultClass='Symm_LunMaskingView')
+        if len(maskingViews) > 0:
+            foundMaskingViewInstanceName = maskingViews[0]
 
-        return maskingViews
+        return foundMaskingViewInstanceName
 
     def add_volume_to_storage_group(
             self, conn, controllerConfigService, storageGroupInstanceName,
@@ -1875,7 +1845,6 @@ class EMCVMAXMasking(object):
         """
         storageGroupInstanceName = None
         if extraSpecs[ISV3]:
-            extraSpecs['connector'] = connector
             self._cleanup_deletion_v3(
                 conn, controllerConfigService, volumeInstance, extraSpecs)
         else:
@@ -1939,10 +1908,12 @@ class EMCVMAXMasking(object):
         """
         instance = conn.GetInstance(storageGroupInstanceName, LocalOnly=False)
         storageGroupName = instance['ElementName']
-        mvInstanceNames = self.get_masking_view_from_storage_group(
+        mvInstanceName = self.get_masking_view_from_storage_group(
             conn, storageGroupInstanceName)
-        if not mvInstanceNames:
-            LOG.debug("Unable to get masking view from storage group.")
+        if mvInstanceName is None:
+            LOG.debug("Unable to get masking view %(maskingView)s "
+                      "from storage group.",
+                      {'maskingView': mvInstanceName})
 
             @coordination.synchronized("emc-sg-{storageGroup}")
             def do_remove_volume_from_sg(storageGroup):
@@ -1972,46 +1943,43 @@ class EMCVMAXMasking(object):
 
             return do_remove_volume_from_sg(storageGroupName)
         else:
-            for mvInstanceName in mvInstanceNames:
-                # need to lock masking view when we are locking the storage
-                # group to avoid possible deadlock situations from concurrent
-                # processes
-                maskingViewInstance = conn.GetInstance(
-                    mvInstanceName, LocalOnly=False)
-                maskingViewName = maskingViewInstance['ElementName']
+            # need to lock masking view when we are locking the storage
+            # group to avoid possible deadlock situations from concurrent
+            # processes
+            maskingViewInstance = conn.GetInstance(
+                mvInstanceName, LocalOnly=False)
+            maskingViewName = maskingViewInstance['ElementName']
 
-                @coordination.synchronized("emc-sg-{maskingView}")
-                def do_remove_volume_from_sg(maskingView):
-                    @coordination.synchronized("emc-mv-{storageGroup}")
-                    def inner_do_remove_volume_from_sg(storageGroup):
-                        volumeInstanceNames = (
-                            self.get_devices_from_storage_group(
-                                conn, storageGroupInstanceName))
-                        numVolInStorageGroup = len(volumeInstanceNames)
-                        LOG.debug(
-                            "There are %(numVol)d volumes in the storage "
-                            "group %(sg)s associated with %(mvName)s",
-                            {'numVol': numVolInStorageGroup,
-                             'sg': storageGroup,
-                             'mvName': maskingViewName})
+            @coordination.synchronized("emc-sg-{maskingView}")
+            def do_remove_volume_from_sg(maskingView):
+                @coordination.synchronized("emc-mv-{storageGroup}")
+                def inner_do_remove_volume_from_sg(storageGroup):
+                    volumeInstanceNames = self.get_devices_from_storage_group(
+                        conn, storageGroupInstanceName)
+                    numVolInStorageGroup = len(volumeInstanceNames)
+                    LOG.debug(
+                        "There are %(numVol)d volumes in the storage group "
+                        "%(maskingGroup)s associated with %(mvName)s",
+                        {'numVol': numVolInStorageGroup,
+                         'maskingGroup': storageGroup,
+                         'mvName': maskingViewName})
 
-                        if numVolInStorageGroup == 1:
-                            # Last volume in the storage group.
-                            self._last_vol_in_SG(
-                                conn, controllerConfigService,
-                                storageGroupInstanceName,
-                                storageGroupName, volumeInstance,
-                                volumeInstance['ElementName'], extraSpecs)
-                        else:
-                            # Not the last volume so remove it from storage
-                            # group
-                            self._multiple_vols_in_SG(
-                                conn, controllerConfigService,
-                                storageGroupInstanceName,
-                                volumeInstance, volumeInstance['ElementName'],
-                                numVolInStorageGroup, extraSpecs)
-                    return inner_do_remove_volume_from_sg(storageGroupName)
-                return do_remove_volume_from_sg(maskingViewName)
+                    if numVolInStorageGroup == 1:
+                        # Last volume in the storage group.
+                        self._last_vol_in_SG(
+                            conn, controllerConfigService,
+                            storageGroupInstanceName,
+                            storageGroupName, volumeInstance,
+                            volumeInstance['ElementName'], extraSpecs)
+                    else:
+                        # Not the last volume so remove it from storage group
+                        self._multiple_vols_in_SG(
+                            conn, controllerConfigService,
+                            storageGroupInstanceName,
+                            volumeInstance, volumeInstance['ElementName'],
+                            numVolInStorageGroup, extraSpecs)
+                return inner_do_remove_volume_from_sg(storageGroupName)
+            return do_remove_volume_from_sg(maskingViewName)
 
     def _last_vol_in_SG(
             self, conn, controllerConfigService, storageGroupInstanceName,
@@ -2039,9 +2007,9 @@ class EMCVMAXMasking(object):
         LOG.debug("Only one volume remains in storage group "
                   "%(sgname)s. Driver will attempt cleanup.",
                   {'sgname': storageGroupName})
-        mvInstanceNames = self.get_masking_view_from_storage_group(
+        mvInstanceName = self.get_masking_view_from_storage_group(
             conn, storageGroupInstanceName)
-        if not mvInstanceNames:
+        if mvInstanceName is None:
             # Remove the volume from the storage group and delete the SG.
             self._remove_last_vol_and_delete_sg(
                 conn, controllerConfigService,
@@ -2050,21 +2018,18 @@ class EMCVMAXMasking(object):
                 volumeName, extraSpecs)
             status = True
         else:
-            mv_count = len(mvInstanceNames)
-            for mvInstanceName in mvInstanceNames:
-                maskingViewInstance = conn.GetInstance(
-                    mvInstanceName, LocalOnly=False)
-                maskingViewName = maskingViewInstance['ElementName']
+            maskingViewInstance = conn.GetInstance(
+                mvInstanceName, LocalOnly=False)
+            maskingViewName = maskingViewInstance['ElementName']
 
-                def do_delete_mv_ig_and_sg():
-                    return self._delete_mv_ig_and_sg(
-                        conn, controllerConfigService, mvInstanceName,
-                        maskingViewName, storageGroupInstanceName,
-                        storageGroupName, volumeInstance, volumeName,
-                        extraSpecs, mv_count)
-                do_delete_mv_ig_and_sg()
-                status = True
-                mv_count -= 1
+            def do_delete_mv_ig_and_sg():
+                return self._delete_mv_ig_and_sg(
+                    conn, controllerConfigService, mvInstanceName,
+                    maskingViewName, storageGroupInstanceName,
+                    storageGroupName, volumeInstance, volumeName,
+                    extraSpecs)
+            do_delete_mv_ig_and_sg()
+            status = True
         return status
 
     def _multiple_vols_in_SG(
@@ -2102,7 +2067,7 @@ class EMCVMAXMasking(object):
     def _delete_mv_ig_and_sg(
             self, conn, controllerConfigService, mvInstanceName,
             maskingViewName, storageGroupInstanceName, storageGroupName,
-            volumeInstance, volumeName, extraSpecs, mv_count):
+            volumeInstance, volumeName, extraSpecs):
         """Delete the Masking view, the storage Group and  the initiator group.
 
         :param conn: connection to the ecom server
@@ -2114,7 +2079,6 @@ class EMCVMAXMasking(object):
         :param volumeInstance: the volume Instance
         :param volumeName: the volume name
         :param extraSpecs: extra specs
-        :param mv_count: number of masking views
         """
         isV3 = extraSpecs[ISV3]
         fastPolicyName = extraSpecs.get(FASTPOLICY, None)
@@ -2142,20 +2106,16 @@ class EMCVMAXMasking(object):
                 storageSystemInstanceName['Name'],
                 storageGroupInstanceName, extraSpecs)
 
-        if mv_count == 1:
-            if self._is_volume_in_storage_group(
-                    conn, storageGroupInstanceName,
-                    volumeInstance, storageGroupName):
-                self._remove_last_vol_and_delete_sg(
-                    conn, controllerConfigService, storageGroupInstanceName,
-                    storageGroupName, volumeInstance.path, volumeName,
-                    extraSpecs)
+        self._remove_last_vol_and_delete_sg(
+            conn, controllerConfigService, storageGroupInstanceName,
+            storageGroupName, volumeInstance.path, volumeName,
+            extraSpecs)
 
-            LOG.debug(
-                "Volume %(volumeName)s successfully removed from SG and "
-                "Storage Group %(storageGroupName)s successfully deleted. ",
-                {'volumeName': volumeName,
-                 'storageGroupName': storageGroupName})
+        LOG.debug(
+            "Volume %(volumeName)s successfully removed from SG and "
+            "Storage Group %(storageGroupName)s successfully deleted. ",
+            {'volumeName': volumeName,
+             'storageGroupName': storageGroupName})
 
     def _return_back_to_default_sg(
             self, conn, controllerConfigService, volumeInstance, volumeName,
@@ -2506,10 +2466,10 @@ class EMCVMAXMasking(object):
             # Get the SG by IGs.
             for sgInstanceName in storageGroupInstanceNames:
                 # Get maskingview from storage group.
-                mvInstanceNames = self.get_masking_view_from_storage_group(
+                mvInstanceName = self.get_masking_view_from_storage_group(
                     conn, sgInstanceName)
                 # Get initiator group from masking view.
-                for mvInstanceName in mvInstanceNames:
+                if mvInstanceName:
                     LOG.debug("Found masking view associated with SG "
                               "%(storageGroup)s: %(maskingview)s",
                               {'maskingview': mvInstanceName,
