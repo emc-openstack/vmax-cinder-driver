@@ -1875,7 +1875,6 @@ class EMCVMAXMasking(object):
         """
         storageGroupInstanceName = None
         if extraSpecs[ISV3]:
-            extraSpecs['connector'] = connector
             self._cleanup_deletion_v3(
                 conn, controllerConfigService, volumeInstance, extraSpecs)
         else:
