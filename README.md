@@ -832,3 +832,25 @@ note:
 *EMCMaxSubscriptionPercent* is 200 on one pool. It is 300 on another pool.
 The user defined *max_over_subscription_ratio* is 2.5. Oversubscription is
 200% on the first pool and 250% on the other.
+
+## Live Migration
+
+In order for migration to be live then the *storage group* must be shared
+between *masking view* for *source host* and *masking view* for
+*target host*. The *port group* is also shared so the *4096 maximum TDEVs
+mapped per VMAX ports* is not exceeded
+
+    OS-source-MV = OS-source-SG + OS-source-IG + OS-source-PG
+    OS-target-MV = OS-source-SG + OS-target-IG + OS-source-PG
+
+The target MV is in the following format:
+
+    *OS-<targethost>-<SRP>-<SLO>-<workload>-<volid>-MV*
+
+Example:
+
+    *OS-targethost-SRP_1-Diamond-NONE-c0995872-MV*
+
+To run Live migration:
+
+    nova live-migration <instance_id> <target_host>
