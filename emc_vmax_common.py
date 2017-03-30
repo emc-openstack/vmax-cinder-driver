@@ -566,7 +566,6 @@ class EMCVMAXCommon(object):
         """Get the storage group from the existing masking view.
 
         :params deviceInfoDict: the device info dictionary
-        :params storageSystemName: storage system name
         :returns: storage group instance
         """
         storageGroupInstanceName = None
@@ -590,7 +589,6 @@ class EMCVMAXCommon(object):
         """Get the port group from the existing masking view.
 
         :params deviceInfoDict: the device info dictionary
-        :params storageSystemName: storage system name
         :returns: port group instance
         """
         portGroupInstanceName = None
