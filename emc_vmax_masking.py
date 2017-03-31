@@ -1925,7 +1925,7 @@ class EMCVMAXMasking(object):
         mvInstanceNames = self.get_masking_view_from_storage_group(
             conn, storageGroupInstanceName)
         if not mvInstanceNames:
-            LOG.debug("Unable to get masking view from storage group.")
+            LOG.debug("Unable to get masking views from storage group.")
 
             @coordination.synchronized("emc-sg-{storageGroup}")
             def do_remove_volume_from_sg(storageGroup):
@@ -2651,9 +2651,13 @@ class EMCVMAXMasking(object):
         :param hardwareIdManagementService - hardware id management service
         :param hardwareIdPath - The path of the initiator object
         """
-        ret = conn.InvokeMethod('DeleteStorageHardwareID',
-                                hardwareIdManagementService,
-                                HardwareID = hardwareIdPath)
+        ret = -1
+        try:
+            ret = conn.InvokeMethod('DeleteStorageHardwareID',
+                                    hardwareIdManagementService,
+                                    HardwareID = hardwareIdPath)
+        except Exception:
+            pass
         if ret == 0:
             LOG.debug("Deletion of initiator path %(hardwareIdPath)s "
                       "is successful.", {'hardwareIdPath': hardwareIdPath})
