@@ -256,11 +256,16 @@ class EMCVMAXProvisionV3(object):
                    'syncType': syncType,
                    'source': sourceInstance.path})
         storageSystemName = sourceInstance['SystemName']
-        __, __, sgInstanceName = (
+        storageGroupName, controllerConfigService, sgInstanceName = (
             self.utils.get_v3_default_sg_instance_name(
                 conn, extraSpecs[self.utils.POOL],
                 extraSpecs[self.utils.SLO],
                 extraSpecs[self.utils.WORKLOAD], storageSystemName))
+        if sgInstanceName is None:
+            sgInstanceName = self.provisionv3.create_storage_group_v3(
+                self.conn, controllerConfigService, storageGroupName,
+                extraSpecs[self.utils.POOL], extraSpecs[self.utils.SLO],
+                extraSpecs[self.utils.WORKLOAD], extraSpecs)
         try:
             storageGroupInstance = conn.GetInstance(sgInstanceName)
         except Exception:
