@@ -72,9 +72,10 @@ class EMCVMAXISCSIDriver(driver.ISCSIDriver):
         2.3.5 - remove_and_reset_members fix
         2.3.6 - copy state fix (bug #1660378)
         2.3.7 - superfluous debug messages causing error(#1664630)
+        2.3.8 - manage/unmanage volumes fix
     """
 
-    VERSION = "2.3.7"
+    VERSION = "2.3.8"
 
     def __init__(self, *args, **kwargs):
 
