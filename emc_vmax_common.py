@@ -334,7 +334,6 @@ class EMCVMAXCommon(object):
         :raises: VolumeBackendAPIException
         """
         extraSpecs = self._initial_setup(volume)
-
         volumename = volume['name']
         LOG.info(_LI("Unmap volume: %(volume)s."),
                  {'volume': volumename})
@@ -1990,7 +1989,6 @@ class EMCVMAXCommon(object):
         maskingViewDict['maskingViewNameLM'] = ("%(prefix)s-%(volid)s-MV"
                                                 % {'prefix': prefix,
                                                    'volid': volume['id'][:8]})
-
         volumeName = volume['name']
         volumeInstance = self._find_lun(volume)
         storageSystemName = volumeInstance['SystemName']

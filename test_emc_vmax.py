@@ -2197,7 +2197,7 @@ class EMCVMAXISCSIDriverNoFastTestCase(test.TestCase):
     def test_find_device_number(self):
         host = 'fakehost'
         data, __, __ = (
-            self.driver.common.find_device_number(self.data.test_volume_v2,
+            self.driver.common.find_device_number(self.data.test_volume,
                                                   host))
         self.assertEqual('OS-fakehost-MV', data['maskingview'])
 
@@ -2208,7 +2208,7 @@ class EMCVMAXISCSIDriverNoFastTestCase(test.TestCase):
     def test_find_device_number_false(self, mock_ref_name):
         host = 'bogushost'
         data, __, __ = (
-            self.driver.common.find_device_number(self.data.test_volume_v2,
+            self.driver.common.find_device_number(self.data.test_volume,
                                                   host))
         self.assertFalse(data)
 
@@ -2216,7 +2216,7 @@ class EMCVMAXISCSIDriverNoFastTestCase(test.TestCase):
         # Long host name
         host = 'myhost.mydomain.com'
         data, __, __ = (
-            self.driver.common.find_device_number(self.data.test_volume_v2,
+            self.driver.common.find_device_number(self.data.test_volume,
                                                   host))
         self.assertEqual('OS-myhost-MV', data['maskingview'])
 
@@ -3333,8 +3333,6 @@ class EMCVMAXISCSIDriverNoFastTestCase(test.TestCase):
                                                 mock_check,
                                                 mock_sg_from_mv,
                                                 mock_pg_from_mv):
-        emc_vmax_utils.LIVE_MIGRATION_FILE = (self.tempdir +
-                                              '/livemigrationarray')
         self.driver.initialize_connection(self.data.test_volume,
                                           self.data.connector)
 
