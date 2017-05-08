@@ -73,9 +73,10 @@ class EMCVMAXFCDriver(driver.FibreChannelDriver):
         2.4.1 - Pre-zoned port group fix (bug #456285)
         2.4.2 - Detaching volumes if part of two or more MVs (bug #458458)
         2.4.3 - Rollback error on Live Migration (bug #1686174)
+        2.4.4 - Ensure VMAX volume matches cinder db volume (bug #1401297)
     """
 
-    VERSION = "2.4.3"
+    VERSION = "2.4.4"
 
     # ThirdPartySystems wiki
     CI_WIKI_NAME = "EMC_VMAX_CI"
