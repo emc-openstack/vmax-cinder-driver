@@ -3290,6 +3290,11 @@ class EMCVMAXISCSIDriverNoFastTestCase(test.TestCase):
                                           self.data.connector)
 
     @mock.patch.object(
+        emc_vmax_masking.EMCVMAXMasking,
+        '_get_port_group_from_masking_view',
+        return_value={'CreationClassName': 'CIM_TargetMaskingGroup',
+                      'ElementName': 'OS-portgroup-PG'})
+    @mock.patch.object(
         emc_vmax_utils.EMCVMAXUtils,
         'insert_live_migration_record')
     @mock.patch.object(
@@ -3345,7 +3350,8 @@ class EMCVMAXISCSIDriverNoFastTestCase(test.TestCase):
                                                 mock_check,
                                                 mock_sg_from_mv,
                                                 mock_pg_from_mv,
-                                                mock_file):
+                                                mock_file,
+                                                mock_pg_from_mv2):
         self.driver.initialize_connection(self.data.test_volume,
                                           self.data.connector)
 
