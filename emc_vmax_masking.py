@@ -2819,10 +2819,10 @@ class EMCVMAXMasking(object):
             self._get_port_group_from_masking_view(
                 conn, maskingViewName, storageSystemName))
         if portGroupInstanceName is None:
-            LOG.error(_LE(
-                "Cannot get port group from masking view: "
-                "%(maskingViewName)s. "),
-                {'maskingViewName': maskingViewName})
+            errorMessage = (_("Cannot get port group from masking view: "
+                            "%(maskingViewName)s.") %
+                            {'maskingViewName': maskingViewName})
+            LOG.error(errorMessage)
         else:
             try:
                 portGroupInstance = (
@@ -2830,8 +2830,8 @@ class EMCVMAXMasking(object):
                 portGroupName = (
                     portGroupInstance['ElementName'])
             except Exception:
-                LOG.error(_LE(
-                    "Cannot get port group name."))
+                errorMessage = (_("Cannot get port group name."))
+                LOG.error(errorMessage)
         return portGroupName, errorMessage
 
     @coordination.synchronized('emc-sg-'
