@@ -2110,10 +2110,21 @@ class EMCVMAXMasking(object):
         self._last_volume_delete_masking_view(
             conn, controllerConfigService, mvInstanceName,
             maskingViewName, extraSpecs)
-        self._last_volume_delete_initiator_group(
-            conn, controllerConfigService,
-            initiatorGroupInstanceName, extraSpecs, host)
+        LOG.debug(
+            "The initiator group from masking view %(maskingViewName)s "
+            "is %(initiatorGroupInstanceName)s.",
+            {'maskingViewName': maskingViewName,
+             'initiatorGroupInstanceName': initiatorGroupInstanceName})
+        initiatorGroupInstance = conn.GetInstance(initiatorGroupInstanceName)
+        if initiatorGroupInstance:
+            initiatorGroupName = initiatorGroupInstance['ElementName']
 
+            @coordination.synchronized('emc-ig-{initiatorGroupName}')
+            def inner_do_delete_initiator_group(initiatorGroupName):
+                self._last_volume_delete_initiator_group(
+                    conn, controllerConfigService,
+                    initiatorGroupInstanceName, extraSpecs, host)
+            inner_do_delete_initiator_group(initiatorGroupName)
         if not isV3:
             isTieringPolicySupported, tierPolicyServiceInstanceName = (
                 self._get_tiering_info(conn, storageSystemInstanceName,
@@ -2671,8 +2682,8 @@ class EMCVMAXMasking(object):
             LOG.debug("Deletion of initiator path %(hardwareIdPath)s "
                       "is successful.", {'hardwareIdPath': hardwareIdPath})
         else:
-            LOG.warning(_LW("Deletion of initiator path %(hardwareIdPath)s "
-                            "is failed."), {'hardwareIdPath': hardwareIdPath})
+            LOG.debug("Deletion of initiator path %(hardwareIdPath)s "
+                      "failed.", {'hardwareIdPath': hardwareIdPath})
 
     def _delete_initiators_from_initiator_group(self, conn,
                                                 controllerConfigService,

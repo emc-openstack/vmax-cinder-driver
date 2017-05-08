@@ -348,7 +348,12 @@ class EMCVMAXCommon(object):
         vol_instance = self._find_lun(volume)
         storage_system = vol_instance['SystemName']
 
-        if self._is_volume_multiple_masking_views(vol_instance):
+        livemigrationrecord = self.utils.get_live_migration_record(volume)
+        if livemigrationrecord:
+            self.utils.delete_live_migration_record(volume)
+
+        if livemigrationrecord and self._is_volume_multiple_masking_views(
+                vol_instance):
             return
 
         configservice = self.utils.find_controller_configuration_service(
@@ -430,12 +435,14 @@ class EMCVMAXCommon(object):
                          "The device number is  %(deviceNumber)s."),
                      {'volume': volumeName,
                       'deviceNumber': deviceNumber})
+            self.utils.insert_live_migration_record(volume)
             # Special case, we still need to get the iscsi ip address.
             portGroupName = (
                 self._get_correct_port_group(
                     deviceInfoDict, maskingViewDict['storageSystemName']))
         else:
             if isLiveMigration:
+                self.utils.insert_live_migration_record(volume)
                 maskingViewDict['storageGroupInstanceName'] = (
                     self._get_storage_group_from_source(sourceInfoDict))
                 maskingViewDict['portGroupInstanceName'] = (
@@ -493,6 +500,9 @@ class EMCVMAXCommon(object):
                     (rollbackDict['isV3'] is not None)):
                 (self.masking._check_if_rollback_action_for_masking_required(
                     self.conn, rollbackDict))
+            livemigrationrecord = self.utils.get_live_migration_record(volume)
+            if livemigrationrecord:
+                self.utils.delete_live_migration_record(volume)
             exception_message = (_("Error Attaching volume %(vol)s.")
                                  % {'vol': volumeName})
             raise exception.VolumeBackendAPIException(
@@ -1711,11 +1721,13 @@ class EMCVMAXCommon(object):
             fc_targets = self.get_target_wwns_from_masking_view(
                 storage_system, volume, connector)
         except Exception:
-            exception_message = _("Unable to get fc targets.")
+            exception_message = (_(
+                "Unable to get fc targets."))
             raise exception.VolumeBackendAPIException(
                 data=exception_message)
 
-        LOG.debug("There are %(len)lu endpoints.", {'len': len(fc_targets)})
+        LOG.debug("There are %(len)lu endpoints.",
+                  {'len': len(fc_targets)})
         for fc_target in fc_targets:
             wwn = fc_target
             # Add target wwn to the list if it is not already there.

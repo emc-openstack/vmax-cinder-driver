@@ -71,9 +71,10 @@ class EMCVMAXFCDriver(driver.FibreChannelDriver):
               - VMAX oversubscription Support (blueprint vmax-oversubscription)
               - QoS support (blueprint vmax-qos)
         2.4.1 - Pre-zoned port group fix (bug #456285)
+        2.4.2 - Detaching volumes if part of two or more MVs (bug #458458)
     """
 
-    VERSION = "2.4.1"
+    VERSION = "2.4.2"
 
     # ThirdPartySystems wiki
     CI_WIKI_NAME = "EMC_VMAX_CI"

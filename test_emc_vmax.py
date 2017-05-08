@@ -15,6 +15,7 @@
 
 import os
 import shutil
+import sys
 import tempfile
 import unittest
 from xml.dom import minidom
@@ -3235,6 +3236,9 @@ class EMCVMAXISCSIDriverNoFastTestCase(test.TestCase):
                           self.data.failed_delete_vol)
 
     @mock.patch.object(
+        emc_vmax_utils.EMCVMAXUtils,
+        'insert_live_migration_record')
+    @mock.patch.object(
         emc_vmax_common.EMCVMAXCommon,
         '_is_same_host',
         return_value=True)
@@ -3254,7 +3258,7 @@ class EMCVMAXISCSIDriverNoFastTestCase(test.TestCase):
         return_value={'volume_backend_name': 'ISCSINoFAST'})
     def test_already_mapped_no_fast_success(
             self, _mock_volume_type, mock_wrap_group, mock_wrap_device,
-            mock_is_same_host):
+            mock_is_same_host, mock_rec):
         self.driver.common._get_correct_port_group = mock.Mock(
             return_value=self.data.port_group)
         self.driver.initialize_connection(self.data.test_volume,
@@ -3284,6 +3288,9 @@ class EMCVMAXISCSIDriverNoFastTestCase(test.TestCase):
         self.driver.initialize_connection(self.data.test_volume,
                                           self.data.connector)
 
+    @mock.patch.object(
+        emc_vmax_utils.EMCVMAXUtils,
+        'insert_live_migration_record')
     @mock.patch.object(
         emc_vmax_common.EMCVMAXCommon,
         '_get_port_group_from_source',
@@ -3336,10 +3343,14 @@ class EMCVMAXISCSIDriverNoFastTestCase(test.TestCase):
                                                 mock_same_host,
                                                 mock_check,
                                                 mock_sg_from_mv,
-                                                mock_pg_from_mv):
+                                                mock_pg_from_mv,
+                                                mock_file):
         self.driver.initialize_connection(self.data.test_volume,
                                           self.data.connector)
 
+    @mock.patch.object(
+        emc_vmax_utils.EMCVMAXUtils,
+        'insert_live_migration_record')
     @mock.patch.object(
         emc_vmax_masking.EMCVMAXMasking,
         '_get_initiator_group_from_masking_view',
@@ -3362,7 +3373,7 @@ class EMCVMAXISCSIDriverNoFastTestCase(test.TestCase):
         return_value={'volume_backend_name': 'ISCSINoFAST'})
     def test_map_existing_masking_view_no_fast_success(
             self, _mock_volume_type, mock_wrap_group, mock_storage_group,
-            mock_initiator_group, mock_ig_from_mv):
+            mock_initiator_group, mock_ig_from_mv, mock_rec):
         self.driver.initialize_connection(self.data.test_volume,
                                           self.data.connector)
 
@@ -4245,6 +4256,9 @@ class EMCVMAXISCSIDriverFastTestCase(test.TestCase):
                           self.data.failed_delete_vol)
 
     @mock.patch.object(
+        emc_vmax_utils.EMCVMAXUtils,
+        'insert_live_migration_record')
+    @mock.patch.object(
         emc_vmax_common.EMCVMAXCommon,
         '_is_same_host',
         return_value=True)
@@ -4264,7 +4278,7 @@ class EMCVMAXISCSIDriverFastTestCase(test.TestCase):
         return_value={'volume_backend_name': 'ISCSIFAST'})
     def test_already_mapped_fast_success(
             self, _mock_volume_type, mock_wrap_group, mock_wrap_device,
-            mock_is_same_host):
+            mock_is_same_host, mock_rec):
         self.driver.common._get_correct_port_group = mock.Mock(
             return_value=self.data.port_group)
         self.driver.initialize_connection(self.data.test_volume,
@@ -4851,6 +4865,9 @@ class EMCVMAXFCDriverNoFastTestCase(test.TestCase):
                           self.data.failed_delete_vol)
 
     @mock.patch.object(
+        emc_vmax_utils.EMCVMAXUtils,
+        'insert_live_migration_record')
+    @mock.patch.object(
         emc_vmax_common.EMCVMAXCommon,
         '_is_same_host',
         return_value=True)
@@ -4864,7 +4881,8 @@ class EMCVMAXFCDriverNoFastTestCase(test.TestCase):
         return_value={'volume_backend_name': 'FCNoFAST',
                       'FASTPOLICY': 'FC_GOLD1'})
     def test_map_lookup_service_no_fast_success(
-            self, _mock_volume_type, mock_maskingview, mock_is_same_host):
+            self, _mock_volume_type, mock_maskingview, mock_is_same_host,
+            mock_rec):
         self.data.test_volume['volume_name'] = "vmax-1234567"
         common = self.driver.common
         common.get_target_wwns_from_masking_view = mock.Mock(
@@ -5452,6 +5470,9 @@ class EMCVMAXFCDriverFastTestCase(test.TestCase):
                           self.data.failed_delete_vol)
 
     @mock.patch.object(
+        emc_vmax_utils.EMCVMAXUtils,
+        'insert_live_migration_record')
+    @mock.patch.object(
         emc_vmax_common.EMCVMAXCommon,
         '_is_same_host',
         return_value=True)
@@ -5465,7 +5486,7 @@ class EMCVMAXFCDriverFastTestCase(test.TestCase):
         return_value={'volume_backend_name': 'FCFAST',
                       'FASTPOLICY': 'FC_GOLD1'})
     def test_map_fast_success(self, _mock_volume_type, mock_maskingview,
-                              mock_is_same_host):
+                              mock_is_same_host, mock_rec):
         common = self.driver.common
         common.get_target_wwns_list = mock.Mock(
             return_value=EMCVMAXCommonData.target_wwns)
@@ -6527,6 +6548,9 @@ class EMCV3DriverTestCase(test.TestCase):
             add_volumes, remove_volumes)
 
     @mock.patch.object(
+        emc_vmax_utils.EMCVMAXUtils,
+        'insert_live_migration_record')
+    @mock.patch.object(
         emc_vmax_common.EMCVMAXCommon,
         '_is_same_host',
         return_value=True)
@@ -6539,7 +6563,8 @@ class EMCV3DriverTestCase(test.TestCase):
         'get_volume_type_extra_specs',
         return_value={'volume_backend_name': 'V3_BE'})
     def test_map_v3_success(
-            self, _mock_volume_type, mock_maskingview, mock_is_same_host):
+            self, _mock_volume_type, mock_maskingview, mock_is_same_host,
+            mock_rec):
         common = self.driver.common
         common.get_target_wwns_list = mock.Mock(
             return_value=EMCVMAXCommonData.target_wwns)
@@ -8487,6 +8512,52 @@ class EMCVMAXUtilsTest(test.TestCase):
             foundIg = self.driver.utils.check_ig_instance_name(
                 conn, initiatorgroup)
             self.assertIsNone(foundIg)
+
+    @mock.patch('builtins.open' if sys.version_info >= (3,)
+                else '__builtin__.open')
+    def test_insert_live_migration_record(self, mock_open):
+        volume = {'id': '12345678-87654321'}
+        tempdir = tempfile.mkdtemp()
+        emc_vmax_utils.LIVE_MIGRATION_FILE = (
+            tempdir + '/livemigrationarray')
+        lm_file_name = ("%(prefix)s-%(volid)s"
+                        % {'prefix': emc_vmax_utils.LIVE_MIGRATION_FILE,
+                           'volid': volume['id'][:8]})
+        self.driver.utils.insert_live_migration_record(volume)
+        mock_open.assert_called_once_with(lm_file_name, "w")
+        self.driver.utils.delete_live_migration_record(volume)
+        shutil.rmtree(tempdir)
+
+    def test_delete_live_migration_record(self):
+        volume = {'id': '12345678-87654321'}
+        tempdir = tempfile.mkdtemp()
+        emc_vmax_utils.LIVE_MIGRATION_FILE = (
+            tempdir + '/livemigrationarray')
+        lm_file_name = ("%(prefix)s-%(volid)s"
+                        % {'prefix': emc_vmax_utils.LIVE_MIGRATION_FILE,
+                           'volid': volume['id'][:8]})
+        m = mock.mock_open()
+        with mock.patch('{}.open'.format(__name__), m, create=True):
+            with open(lm_file_name, "w") as f:
+                f.write('live migration details')
+        self.driver.utils.insert_live_migration_record(volume)
+        self.driver.utils.delete_live_migration_record(volume)
+        m.assert_called_once_with(lm_file_name, "w")
+        shutil.rmtree(tempdir)
+
+    def test_get_live_migration_record(self):
+        volume = {'id': '12345678-87654321'}
+        tempdir = tempfile.mkdtemp()
+        emc_vmax_utils.LIVE_MIGRATION_FILE = (
+            tempdir + '/livemigrationarray')
+        lm_file_name = ("%(prefix)s-%(volid)s"
+                        % {'prefix': emc_vmax_utils.LIVE_MIGRATION_FILE,
+                           'volid': volume['id'][:8]})
+        self.driver.utils.insert_live_migration_record(volume)
+        record = self.driver.utils.get_live_migration_record(volume)
+        self.assertEqual(volume['id'], record[0])
+        os.remove(lm_file_name)
+        shutil.rmtree(tempdir)
 
 
 class EMCVMAXCommonTest(test.TestCase):
