@@ -1653,14 +1653,16 @@ class EMCVMAXCommon(object):
         """
         maskedvols = []
         data = {}
+        source_data = {}
         foundController = None
         foundNumDeviceNumber = None
         foundMaskingViewName = None
+        isLiveMigration = False
         volumeName = volume['name']
         volumeInstance = self._find_lun(volume)
+        if not volumeInstance:
+            return data, isLiveMigration, source_data
         storageSystemName = volumeInstance['SystemName']
-        isLiveMigration = False
-        source_data = {}
 
         unitnames = self.conn.ReferenceNames(
             volumeInstance.path,
@@ -1673,7 +1675,16 @@ class EMCVMAXCommon(object):
             if index > -1:
                 unitinstance = self.conn.GetInstance(unitname,
                                                      LocalOnly=False)
-                numDeviceNumber = int(unitinstance['DeviceNumber'], 16)
+                if unitinstance['DeviceNumber']:
+                    numDeviceNumber = int(unitinstance['DeviceNumber'], 16)
+                else:
+                    LOG.debug(
+                        "Device number not found for volume "
+                        "%(volumeName)s %(volumeInstance)s.",
+                        {'volumeName': volumeName,
+                         'volumeInstance': volumeInstance.path})
+                    break
+
                 foundNumDeviceNumber = numDeviceNumber
                 foundController = controller
                 controllerInstance = self.conn.GetInstance(controller,

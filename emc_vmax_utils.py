@@ -18,6 +18,7 @@ import hashlib
 import os
 import random
 import re
+import tempfile
 from xml.dom import minidom
 
 from oslo_log import log as logging
@@ -52,7 +53,7 @@ EMC_ROOT = 'root/emc'
 CONCATENATED = 'concatenated'
 CINDER_EMC_CONFIG_FILE_PREFIX = '/etc/cinder/cinder_emc_config_'
 CINDER_EMC_CONFIG_FILE_POSTFIX = '.xml'
-LIVE_MIGRATION_FILE = '/etc/cinder/livemigrationarray'
+LIVE_MIGRATION_FILE = tempfile.gettempdir() + '/livemigrationarray'
 ISCSI = 'iscsi'
 FC = 'fc'
 JOB_RETRIES = 60

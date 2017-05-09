@@ -8664,6 +8664,13 @@ class EMCVMAXUtilsTest(test.TestCase):
         os.remove(lm_file_name)
         shutil.rmtree(tempdir)
 
+    def test_get_live_migration_file_name(self):
+        volume = {'id': '12345678-87654321'}
+        lm_live_migration = self.driver.utils.get_live_migration_file_name(
+            volume)
+        self.assertIn('/livemigrationarray-12345678', lm_live_migration)
+        self.assertIn('/tmp/', lm_live_migration)
+
 
 class EMCVMAXCommonTest(test.TestCase):
     def setUp(self):

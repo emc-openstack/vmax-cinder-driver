@@ -80,9 +80,11 @@ class EMCVMAXISCSIDriver(driver.ISCSIDriver):
         2.4.2 - Detaching volumes if part of two or more MVs (bug #458458)
         2.4.3 - Rollback error on Live Migration (bug #1686174)
         2.4.4 - Ensure VMAX volume matches cinder db volume (bug #1401297)
+        2.4.5 - Detaching volumes if part of two or more MVs (bug #458458)
+                Amendment, directing LM temp file to temp directory
     """
 
-    VERSION = "2.4.4"
+    VERSION = "2.4.5"
 
     # ThirdPartySystems wiki
     CI_WIKI_NAME = "EMC_VMAX_CI"
