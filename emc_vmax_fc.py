@@ -76,9 +76,12 @@ class EMCVMAXFCDriver(driver.FibreChannelDriver):
         2.4.4 - Ensure VMAX volume matches cinder db volume (bug #1401297)
         2.4.5 - Detaching volumes if part of two or more MVs (bug #458458)
                 Amendment, directing LM temp file to temp directory
+        2.4.6 - Removing Ensure VMAX volume matches cinder db volume
+                due to backward compatibility issues (bug #1401297)
+
     """
 
-    VERSION = "2.4.5"
+    VERSION = "2.4.6"
 
     # ThirdPartySystems wiki
     CI_WIKI_NAME = "EMC_VMAX_CI"

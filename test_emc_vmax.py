@@ -339,16 +339,10 @@ class EMCVMAXCommonData(object):
                     'SystemName': u'SYMMETRIX+000195900551',
                     'DeviceID': u'99999',
                     'SystemCreationClassName': u'Symm_StorageSystem'}
-    keybindings3 = {'CreationClassName': u'Symm_StorageVolume',
-                    'SystemName': u'SYMMETRIX+000195900551',
-                    'DeviceID': u'10',
-                    'SystemCreationClassName': u'Symm_StorageSystem'}
     provider_location = {'classname': 'Symm_StorageVolume',
                          'keybindings': keybindings}
     provider_location2 = {'classname': 'Symm_StorageVolume',
                           'keybindings': keybindings2}
-    provider_location3 = {'classname': 'Symm_StorageVolume',
-                          'keybindings': keybindings3}
     provider_location_multi_pool = {'classname': 'Symm_StorageVolume',
                                     'keybindings': keybindings,
                                     'version': '2.2.0'}
@@ -384,10 +378,10 @@ class EMCVMAXCommonData(object):
                    'BlockSize': block_size
                    }
 
-    test_volume_v2 = {'name': 'vol2',
+    test_volume_v2 = {'name': 'vol1',
                       'size': 1,
-                      'volume_name': 'vol2',
-                      'id': '2',
+                      'volume_name': 'vol1',
+                      'id': 'vol1',
                       'device_id': '1',
                       'provider_auth': None,
                       'project_id': 'project',
@@ -401,10 +395,10 @@ class EMCVMAXCommonData(object):
                       'BlockSize': block_size
                       }
 
-    test_volume_v3 = {'name': 'vol3',
+    test_volume_v3 = {'name': 'vol1',
                       'size': 1,
-                      'volume_name': 'vol3',
-                      'id': '3',
+                      'volume_name': 'vol1',
+                      'id': 'vol1',
                       'device_id': '1',
                       'provider_auth': None,
                       'project_id': 'project',
@@ -488,16 +482,14 @@ class EMCVMAXCommonData(object):
                           'volume_type_id': 'sourceid',
                           'display_name': 'sourceVolume',
                           'name': 'sourceVolume',
-                          'device_id': '10',
+                          'device_id': '1',
                           'volume_name': 'vmax-154326',
                           'provider_auth': None,
                           'project_id': 'project',
                           'id': '2',
                           'host': fake_host,
-                          'NumberOfBlocks': 100,
-                          'BlockSize': block_size,
                           'provider_location':
-                          six.text_type(provider_location3),
+                          six.text_type(provider_location),
                           'display_description': 'snapshot source volume'}
 
     test_source_volume_v3 = {'size': 1,
@@ -509,11 +501,9 @@ class EMCVMAXCommonData(object):
                              'provider_auth': None,
                              'project_id': 'project',
                              'id': '2',
-                             'NumberOfBlocks': 100,
-                             'BlockSize': block_size,
                              'host': fake_host_v3,
                              'provider_location':
-                             six.text_type(provider_location3),
+                             six.text_type(provider_location),
                              'display_description': 'snapshot source volume'}
 
     test_CG = {'name': 'myCG1',
@@ -521,8 +511,6 @@ class EMCVMAXCommonData(object):
                'volume_type_id': 'abc',
                'status': fields.ConsistencyGroupStatus.AVAILABLE
                }
-    deleted_volume = {'id': 'deleted_vol',
-                      'provider_location': six.text_type(provider_location)}
     test_snapshot = {'name': 'myCG1',
                      'id': '12345abcde',
                      'status': 'available',
@@ -531,7 +519,7 @@ class EMCVMAXCommonData(object):
                      'provider_location': six.text_type(provider_location)
                      }
     test_snapshot_v3 = {'name': 'myCG1',
-                        'id': '1',
+                        'id': '12345abcde',
                         'status': 'available',
                         'host': fake_host_v3,
                         'volume': test_source_volume_v3,
@@ -1423,7 +1411,7 @@ class FakeEcomConnection(object):
         failed_delete_vol = EMC_StorageVolume()
         failed_delete_vol['name'] = 'failed_delete_vol'
         failed_delete_vol['CreationClassName'] = 'Symm_StorageVolume'
-        failed_delete_vol['ElementName'] = self.data.failed_delete_vol['id']
+        failed_delete_vol['ElementName'] = 'failed_delete_vol'
         failed_delete_vol['DeviceID'] = '99999'
         failed_delete_vol['SystemName'] = self.data.storage_system
         # Added vol to vol.path
@@ -1480,22 +1468,6 @@ class FakeEcomConnection(object):
         metaMember2['BlockSize'] = blockSize
         metaMember2['DeviceID'] = self.data.meta_volume2['DeviceID']
         vols.append(metaMember2)
-
-        source_volume = EMC_StorageVolume()
-        source_volume['name'] = self.data.test_source_volume['name']
-        source_volume['CreationClassName'] = 'Symm_StorageVolume'
-        source_volume['ElementName'] = self.data.test_source_volume['id']
-        source_volume['DeviceID'] = self.data.test_source_volume['device_id']
-        source_volume['Id'] = self.data.test_source_volume['id']
-        source_volume['SystemName'] = self.data.storage_system
-        source_volume['NumberOfBlocks'] = (
-            self.data.test_source_volume['NumberOfBlocks'])
-        source_volume['BlockSize'] = self.data.test_source_volume['BlockSize']
-        source_volume['SystemCreationClassName'] = 'Symm_StorageSystem'
-        source_volume.path = source_volume
-        source_volume.path.classname = source_volume['CreationClassName']
-        source_volume.properties = properties
-        vols.append(source_volume)
 
         return vols
 
@@ -2259,7 +2231,7 @@ class EMCVMAXISCSIDriverNoFastTestCase(test.TestCase):
         host = 'myShortnameIsOverThirtyEightCharactersLong'
         host = self.driver.common.utils.generate_unique_trunc_host(host)
         amended = 'OS-' + host + '-MV'
-        v2_host_over_38 = self.data.test_volume.copy()
+        v2_host_over_38 = self.data.test_volume_v2.copy()
         # Pool aware scheduler enabled
         v2_host_over_38['host'] = host
         data, __, __ = (
@@ -2543,7 +2515,6 @@ class EMCVMAXISCSIDriverNoFastTestCase(test.TestCase):
                              'keybindings': keybindings}
         volume = EMC_StorageVolume()
         volume['name'] = 'vol1'
-        volume['id'] = '1'
         volume['provider_location'] = six.text_type(provider_location)
 
         self.driver.common.conn = self.driver.common._get_ecom_connection()
@@ -2561,7 +2532,6 @@ class EMCVMAXISCSIDriverNoFastTestCase(test.TestCase):
                               'keybindings': keybindings2}
         volume2 = EMC_StorageVolume()
         volume2['name'] = 'myVol'
-        volume2['id'] = 'myVol'
         volume2['provider_location'] = six.text_type(provider_location2)
         verify_orig = self.driver.common.conn.GetInstance
         self.driver.common.conn.GetInstance = mock.Mock(
@@ -5146,7 +5116,6 @@ class EMCVMAXFCDriverNoFastTestCase(test.TestCase):
         storageSystem['InstanceID'] = "SYMMETRIX+00019870000"
         volume['volume_metadata'] = [metadata]
         volume['name'] = "test-volume"
-        volume['id'] = "test-volume"
         external_ref = {'source-name': '0123'}
         utils = self.driver.common.utils
         gbSize = 2
@@ -6447,10 +6416,6 @@ class EMCV3DriverTestCase(test.TestCase):
                                    self.data.test_host)
 
     @mock.patch.object(
-        emc_vmax_utils.EMCVMAXUtils,
-        'get_volume_element_name',
-        return_value='1')
-    @mock.patch.object(
         emc_vmax_provision_v3.EMCVMAXProvisionV3,
         '_find_new_storage_group',
         return_value=EMCVMAXCommonData.default_sg_instance_name)
@@ -6468,7 +6433,7 @@ class EMCV3DriverTestCase(test.TestCase):
         return_value={'volume_backend_name': 'V3_BE'})
     def test_retype_volume_v3_success(
             self, _mock_volume_type, mock_fast_settings,
-            mock_storage_group, mock_found_SG, mock_element_name):
+            mock_storage_group, mock_found_SG):
         self.driver.common._initial_setup = mock.Mock(
             return_value=self.default_extraspec())
         self.assertTrue(self.driver.retype(
@@ -6591,10 +6556,6 @@ class EMCV3DriverTestCase(test.TestCase):
 
     @mock.patch.object(
         emc_vmax_utils.EMCVMAXUtils,
-        'get_volume_element_name',
-        return_value='1')
-    @mock.patch.object(
-        emc_vmax_utils.EMCVMAXUtils,
         'insert_live_migration_record')
     @mock.patch.object(
         emc_vmax_common.EMCVMAXCommon,
@@ -6610,7 +6571,7 @@ class EMCV3DriverTestCase(test.TestCase):
         return_value={'volume_backend_name': 'V3_BE'})
     def test_map_v3_success(
             self, _mock_volume_type, mock_maskingview, mock_is_same_host,
-            mock_rec, mock_element_name):
+            mock_rec):
         common = self.driver.common
         common.get_target_wwns_list = mock.Mock(
             return_value=EMCVMAXCommonData.target_wwns)
@@ -6772,13 +6733,9 @@ class EMCV3DriverTestCase(test.TestCase):
 
     @mock.patch.object(
         emc_vmax_utils.EMCVMAXUtils,
-        'get_volume_element_name',
-        return_value='1')
-    @mock.patch.object(
-        emc_vmax_utils.EMCVMAXUtils,
         'get_volume_size',
         return_value='2147483648')
-    def test_extend_volume(self, mock_volume_size, mock_element_name):
+    def test_extend_volume(self, mock_volume_size):
         newSize = '2'
         self.driver.common._initial_setup = mock.Mock(
             return_value=self.default_extraspec())
@@ -7333,10 +7290,6 @@ class EMCV3MultiSloDriverTestCase(test.TestCase):
         self.driver.create_volume(self.data.test_volume_CG_v3)
 
     @mock.patch.object(
-        emc_vmax_utils.EMCVMAXUtils,
-        'get_volume_element_name',
-        return_value='1')
-    @mock.patch.object(
         emc_vmax_provision_v3.EMCVMAXProvisionV3,
         '_find_new_storage_group',
         return_value=EMCVMAXCommonData.default_sg_instance_name)
@@ -7354,7 +7307,7 @@ class EMCV3MultiSloDriverTestCase(test.TestCase):
         return_value={'volume_backend_name': 'MULTI_SLO_BE'})
     def test_retype_volume_multi_slo_success(
             self, _mock_volume_type, mock_fast_settings,
-            mock_storage_group, mock_found_SG, mock_element_name):
+            mock_storage_group, mock_found_SG):
         self.driver.common._initial_setup = mock.Mock(
             return_value=self.default_extraspec())
         self.assertTrue(self.driver.retype(
@@ -8933,20 +8886,6 @@ class EMCVMAXCommonTest(test.TestCase):
         self.assertRaises(
             exception.VolumeBackendAPIException,
             common._get_port_group_from_source, deviceInfoDict)
-
-    # Bug 1401297: Cinder volumes can point at wrong backend vol
-    def test_find_lun_check_element_name(self):
-        common = self.driver.common
-        volume = self.data.test_volume
-        common.conn = FakeEcomConnection()
-        # Path 1: Volume is retrieved successfully
-        foundVolumeInstance = common._find_lun(volume)
-        self.assertEqual(foundVolumeInstance['ElementName'],
-                         volume['id'])
-        # Path 2: Volume cannot be found
-        deleted_vol = self.data.deleted_volume
-        foundVolumeInstance = common._find_lun(deleted_vol)
-        self.assertIsNone(foundVolumeInstance)
 
 
 class EMCVMAXProvisionTest(test.TestCase):
