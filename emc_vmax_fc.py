@@ -78,10 +78,11 @@ class EMCVMAXFCDriver(driver.FibreChannelDriver):
                 Amendment, directing LM temp file to temp directory
         2.4.6 - Removing Ensure VMAX volume matches cinder db volume
                 due to backward compatibility issues (bug #1401297)
+        2.4.7 - Close ecom connections (bug #1689760)
 
     """
 
-    VERSION = "2.4.6"
+    VERSION = "2.4.7"
 
     # ThirdPartySystems wiki
     CI_WIKI_NAME = "EMC_VMAX_CI"
