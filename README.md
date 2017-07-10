@@ -854,3 +854,22 @@ Example:
 To run Live migration:
 
     nova live-migration <instance_id> <target_host>
+
+## Host Geometry
+
+A 1GB volume in the VMAX3 will be a little over 1GB due to cylinder sizes.
+If the user wishes a VMAX volume to be exactly of factor of a GB *1GB=1073741824*
+then it is possible to do this by overriding the default:
+
+    [VMAX_FC_DIAMOND]
+    cinder_emc_config_file = /etc/cinder/cinder_emc_config_VMAX_FC_DIAMOND.xml
+    volume_driver = cinder.volume.drivers.emc.emc_vmax_iscsi.EMCVMAXISCSIDriver
+    driver_use_ssl = True
+    driver_ssl_cert_verify = False
+    volume_backend_name = VMAX_FC_DIAMOND
+    host_geometry = True
+
+note:
+    Please note if you use host geometry you cannot not use the image volume 
+    cache option within the same config group, so having *host_geometry = True*
+    and *image_volume_cache_enabled = True* is not a valid configuration.

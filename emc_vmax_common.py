@@ -82,7 +82,11 @@ emc_opts = [
     cfg.StrOpt('initiator_check',
                default=False,
                help='Use this value to enable '
-                    'the initiator_check')]
+                    'the initiator_check'),
+    cfg.StrOpt('host_geometry',
+               default=False,
+               help='Use this value to enable '
+                    'the host_geometry')]
 
 CONF.register_opts(emc_opts)
 
@@ -1433,6 +1437,21 @@ class EMCVMAXCommon(object):
 
         confString = (
             self.configuration.safe_get('initiator_check'))
+        retVal = False
+        stringTrue = "True"
+        if confString:
+            if confString.lower() == stringTrue.lower():
+                retVal = True
+        return retVal
+
+    def _get_geometry_check_flag(self):
+        """Reads the configuration for initator_check flag.
+
+        :returns:  flag
+        """
+
+        confString = (
+            self.configuration.safe_get('host_geometry'))
         retVal = False
         stringTrue = "True"
         if confString:
@@ -3126,6 +3145,15 @@ class EMCVMAXCommon(object):
         volumeDict, rc = self.provisionv3.create_volume_from_sg(
             self.conn, storageConfigService, volumeName,
             sgInstanceName, volumeSize, extraSpecs)
+
+        # Check if user is requesting to change the host geometry
+        if self._get_geometry_check_flag():
+            numBlocks = self.utils.get_number_blocks(volume['size'])
+            volumeInstance = self.utils.find_volume_instance(
+                self.conn, volumeDict, volumeName)
+            self.provisionv3.modify_geometry(
+                self.conn, storageConfigService, volumeInstance.path,
+                numBlocks, volumeName)
 
         return rc, volumeDict, storageSystemName
 

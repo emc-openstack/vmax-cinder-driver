@@ -597,7 +597,8 @@ class FakeEcomConnection(object):
                      EMCCollections=None, InitiatorMaskingGroup=None,
                      DeviceMaskingGroup=None, TargetMaskingGroup=None,
                      ProtocolController=None, StorageID=None, IDType=None,
-                     WaitForCopyState=None, Collections=None):
+                     WaitForCopyState=None, Collections=None,
+                     TargetElements=None, HostCapacity=None):
 
         rc = 0
         myjob = SE_ConcreteJob()
@@ -661,6 +662,10 @@ class FakeEcomConnection(object):
             ret['OutElements'] = [self.data.metaHead_volume,
                                   self.data.meta_volume1,
                                   self.data.meta_volume2]
+            return rc, ret
+        if MethodName == 'EMCModifyGeometry':
+            ret = {}
+            rc = 0
             return rc, ret
 
         job = {'Job': myjob}
@@ -9082,3 +9087,75 @@ class VMAXInitiatorCheckTrueTest(test.TestCase):
         maskingViewDict = self.driver.common._populate_masking_dict(
             self.data.test_volume, connector, extraSpecs)
         self.assertTrue(maskingViewDict['initiatorCheck'])
+
+
+class VMAXGeometryCheckTrueTest(test.TestCase):
+    def setUp(self):
+        self.data = EMCVMAXCommonData()
+
+        super(VMAXGeometryCheckTrueTest, self).setUp()
+
+        self.configuration = mock.Mock(
+            host_geometry='True',
+            config_group='geometryCheckTest')
+
+        def safe_get(key):
+            return getattr(self.configuration, key)
+        self.configuration.safe_get = safe_get
+        emc_vmax_common.EMCVMAXCommon._gather_info = mock.Mock()
+        instancename = FakeCIMInstanceName()
+        self.mock_object(emc_vmax_utils.EMCVMAXUtils, 'get_instance_name',
+                         instancename.fake_getinstancename)
+        self.mock_object(emc_vmax_common.EMCVMAXCommon, '_get_ecom_connection',
+                         FakeEcomConnection)
+        self.mock_object(emc_vmax_utils.EMCVMAXUtils,
+                         'find_controller_configuration_service',
+                         return_value=None)
+
+        self.mock_object(emc_vmax_utils.EMCVMAXUtils, 'isArrayV3',
+                         return_value=True)
+        self.patcher = mock.patch(
+            'oslo_service.loopingcall.FixedIntervalLoopingCall',
+            new=utils.ZeroIntervalLoopingCall)
+        self.patcher.start()
+
+        driver = emc_vmax_iscsi.EMCVMAXISCSIDriver(
+            configuration=self.configuration)
+        driver.db = FakeDB()
+        self.driver = driver
+
+    @mock.patch.object(
+        emc_vmax_utils.EMCVMAXUtils,
+        'get_number_blocks',
+        return_value=2097152)
+    @mock.patch.object(
+        emc_vmax_common.EMCVMAXCommon,
+        '_get_pool_and_storage_system',
+        return_value=(None, EMCVMAXCommonData.storage_system))
+    @mock.patch.object(
+        emc_vmax_provision_v3.EMCVMAXProvisionV3,
+        'create_volume_from_sg',
+        return_value=({'classname': u'Symm_StorageVolume',
+                      'keybindings': EMCVMAXCommonData.keybindings}, 0))
+    @mock.patch.object(
+        emc_vmax_provision_v3.EMCVMAXProvisionV3,
+        'modify_geometry')
+    def test_create_volume_v3_with_geometry_set(
+            self, mock_geo, mock_vol, mock_pool, mock_num_blocks):
+        extra_specs = {'storagetype:pool': 'SRP_1',
+                       'volume_backend_name': 'V3_BE',
+                       'storagetype:workload': 'DSS',
+                       'storagetype:slo': 'Bronze',
+                       'storagetype:array': '1234567891011',
+                       'isV3': True,
+                       'portgroupname': 'OS-portgroup-PG'}
+        self.data.test_volume_v3['host'] = self.data.fake_host_v3
+        self.driver.common._initial_setup = mock.Mock(
+            return_value=extra_specs)
+        self.driver.create_volume(self.data.test_volume_v3)
+        self.driver.common.utils.get_number_blocks.assert_called_once_with(1)
+
+    def test_get_number_blocks(self):
+        utils = self.driver.common.utils
+        self.assertEqual(
+            41943040, utils.get_number_blocks(20))

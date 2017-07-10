@@ -48,6 +48,7 @@ SYNC_SNAPSHOT_LOCAL = 6
 ASYNC_SNAPSHOT_LOCAL = 7
 MAX_POOL_LENGTH = 16
 MAX_FASTPOLICY_LENGTH = 14
+ONE_GB = 2097152
 
 EMC_ROOT = 'root/emc'
 CONCATENATED = 'concatenated'
@@ -2791,3 +2792,11 @@ class EMCVMAXUtils(object):
                         % {'prefix': LIVE_MIGRATION_FILE,
                            'volid': volume['id'][:8]})
         return lm_file_name
+
+    def get_number_blocks(self, volumeSizeGB):
+        """get number of blocks from GB size
+
+        :param volumeSize: volume size in GBs
+        :returns: returns number of blocks
+        """
+        return int(ONE_GB * volumeSizeGB)

@@ -878,3 +878,40 @@ class EMCVMAXProvisionV3(object):
         # Find the newly created volume.
         volumeDict = self.get_volume_dict_from_job(conn, job['Job'])
         return volumeDict, rc
+
+    def modify_geometry(
+            self, conn, storageConfigService, volumeInstanceName,
+            numBlocks, volumeName):
+        """Modify the geometry of the volume
+
+        This is a synchronous operation only
+
+        :param conn: connection to the ecom server
+        :param storageConfigservice: the storage configuration service
+        :param volumeInstanceName: the volume instance name
+        :param numBlocks: the number of blocks
+        :param volumeName: the user friendly volume name
+
+        :returns:
+        """
+        startTime = time.time()
+
+        rc, __ = conn.InvokeMethod(
+            'EMCModifyGeometry',
+            storageConfigService,
+            Operation=self.utils.get_num(1, '16'),
+            TargetElements=[volumeInstanceName],
+            HostCapacity=self.utils.get_num(numBlocks, '64'))
+
+        if rc != 0:
+            exceptionMessage = (_(
+                "Unable to modify the geometry of: %(volumeName)s.")
+                % {'volumeName': volumeName})
+            LOG.error(exceptionMessage)
+            raise exception.VolumeBackendAPIException(
+                data=exceptionMessage)
+
+        LOG.debug("InvokeMethod EMCModifyGeometry "
+                  "took: %(delta)s H:MM:SS.",
+                  {'delta': self.utils.get_time_delta(startTime,
+                                                      time.time())})
