@@ -8892,6 +8892,38 @@ class EMCVMAXCommonTest(test.TestCase):
             exception.VolumeBackendAPIException,
             common._get_port_group_from_source, deviceInfoDict)
 
+    # create snapshot and immediately delete it fails when snapshot > 50GB
+    @mock.patch.object(
+        emc_vmax_utils.EMCVMAXUtils,
+        'get_v3_default_sg_instance_name',
+        return_value=(None, None, EMCVMAXCommonData.default_sg_instance_name))
+    @mock.patch.object(
+        emc_vmax_utils.EMCVMAXUtils,
+        'is_clone_licensed',
+        return_value=True)
+    @mock.patch.object(
+        emc_vmax_common.EMCVMAXCommon,
+        '_get_pool_and_storage_system',
+        return_value=(None, EMCVMAXCommonData.storage_system))
+    @mock.patch.object(
+        volume_types,
+        'get_volume_type_extra_specs',
+        return_value={'volume_backend_name': 'V3_BE'})
+    @mock.patch.object(
+        emc_vmax_common.EMCVMAXCommon,
+        '_get_ecom_connection',
+        return_value=FakeEcomConnection())
+    def test_create_and_delete_snapshot_100GB(
+            self, mock_conn, mock_extraspecs, mock_pool, mock_licence,
+            mock_sg):
+        common = self.driver.common
+        snapshot = self.data.test_snapshot_v3.copy()
+        snapshot['size'] = '100'
+        with mock.patch.object(common, '_initial_setup',
+                               return_value=self.data.extra_specs):
+            self.driver.create_snapshot(snapshot)
+            self.driver.delete_snapshot(snapshot)
+
 
 class EMCVMAXProvisionTest(test.TestCase):
     def setUp(self):
