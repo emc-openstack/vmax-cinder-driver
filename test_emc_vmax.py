@@ -381,7 +381,7 @@ class EMCVMAXCommonData(object):
     test_volume_v2 = {'name': 'vol1',
                       'size': 1,
                       'volume_name': 'vol1',
-                      'id': 'vol1',
+                      'id': '1',
                       'device_id': '1',
                       'provider_auth': None,
                       'project_id': 'project',
@@ -398,7 +398,7 @@ class EMCVMAXCommonData(object):
     test_volume_v3 = {'name': 'vol1',
                       'size': 1,
                       'volume_name': 'vol1',
-                      'id': 'vol1',
+                      'id': '1',
                       'device_id': '1',
                       'provider_auth': None,
                       'project_id': 'project',
@@ -486,7 +486,7 @@ class EMCVMAXCommonData(object):
                           'volume_name': 'vmax-154326',
                           'provider_auth': None,
                           'project_id': 'project',
-                          'id': '2',
+                          'id': '1',
                           'host': fake_host,
                           'provider_location':
                           six.text_type(provider_location),
@@ -500,7 +500,7 @@ class EMCVMAXCommonData(object):
                              'volume_name': 'vmax-154326',
                              'provider_auth': None,
                              'project_id': 'project',
-                             'id': '2',
+                             'id': '1',
                              'host': fake_host_v3,
                              'provider_location':
                              six.text_type(provider_location),
@@ -519,7 +519,7 @@ class EMCVMAXCommonData(object):
                      'provider_location': six.text_type(provider_location)
                      }
     test_snapshot_v3 = {'name': 'myCG1',
-                        'id': '12345abcde',
+                        'id': '1',
                         'status': 'available',
                         'host': fake_host_v3,
                         'volume': test_source_volume_v3,
@@ -1416,7 +1416,7 @@ class FakeEcomConnection(object):
         failed_delete_vol = EMC_StorageVolume()
         failed_delete_vol['name'] = 'failed_delete_vol'
         failed_delete_vol['CreationClassName'] = 'Symm_StorageVolume'
-        failed_delete_vol['ElementName'] = 'failed_delete_vol'
+        failed_delete_vol['ElementName'] = '99999'
         failed_delete_vol['DeviceID'] = '99999'
         failed_delete_vol['SystemName'] = self.data.storage_system
         # Added vol to vol.path
@@ -2519,6 +2519,7 @@ class EMCVMAXISCSIDriverNoFastTestCase(test.TestCase):
         provider_location = {'classname': 'Symm_StorageVolume',
                              'keybindings': keybindings}
         volume = EMC_StorageVolume()
+        volume['id'] = '1'
         volume['name'] = 'vol1'
         volume['provider_location'] = six.text_type(provider_location)
 
@@ -2536,6 +2537,7 @@ class EMCVMAXISCSIDriverNoFastTestCase(test.TestCase):
         provider_location2 = {'classname': 'Symm_StorageVolume',
                               'keybindings': keybindings2}
         volume2 = EMC_StorageVolume()
+        volume2['id'] = '1'
         volume2['name'] = 'myVol'
         volume2['provider_location'] = six.text_type(provider_location2)
         verify_orig = self.driver.common.conn.GetInstance
@@ -3995,7 +3997,7 @@ class EMCVMAXISCSIDriverNoFastTestCase(test.TestCase):
                 self.data.test_CG_snapshot, snapshots))
         self.assertEqual({'status': fields.ConsistencyGroupStatus.AVAILABLE},
                          model_update)
-        self.assertEqual([{'status': 'available', 'id': '2'}],
+        self.assertEqual([{'status': 'available', 'id': '1'}],
                          volumes_model_update)
 
     @mock.patch.object(

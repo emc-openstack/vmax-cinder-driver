@@ -84,10 +84,12 @@ class EMCVMAXISCSIDriver(driver.ISCSIDriver):
         2.4.7 - Close ecom connections (bug #1689760)
         2.4.8 - Enable host geometry on the VMAX
         2.4.9 - Snapshot creation and immediate deletion fix (bug #1662950)
+        2.4.10 - Adding amended version (bug #1401297), no backward
+                compatibility issues
 
     """
 
-    VERSION = "2.4.9"
+    VERSION = "2.4.10"
 
     # ThirdPartySystems wiki
     CI_WIKI_NAME = "EMC_VMAX_CI"
