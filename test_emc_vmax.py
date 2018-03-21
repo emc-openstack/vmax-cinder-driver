@@ -8650,6 +8650,26 @@ class EMCVMAXCommonTest(test.TestCase):
         self.driver = driver
         self.driver.utils = emc_vmax_utils.EMCVMAXUtils(object)
 
+    def test_get_masking_view_by_volume(self):
+        common = self.driver.common
+        common.conn = FakeEcomConnection()
+        masking_view = {'CreationClassName': 'Symm_LunMaskingView',
+                        'ElementName': 'OS-fakehost-gold-I-MV'}
+        data = common.get_masking_view_by_volume(
+            self.data.test_volume, self.data.connector)
+        self.assertEqual(masking_view, data)
+
+    @mock.patch.object(
+        emc_vmax_common.EMCVMAXCommon,
+        '_find_lun',
+        return_value=None)
+    def test_get_masking_view_by_volume_none(self, mock_lun):
+        common = self.driver.common
+        common.conn = FakeEcomConnection()
+        data = common.get_masking_view_by_volume(
+            self.data.test_volume, self.data.connector)
+        self.assertIsNone(data)
+
     @mock.patch.object(
         emc_vmax_common.EMCVMAXCommon,
         '_get_pool_and_storage_system',

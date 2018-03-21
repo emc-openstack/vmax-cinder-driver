@@ -83,10 +83,11 @@ class EMCVMAXFCDriver(driver.FibreChannelDriver):
         2.4.9 - Snapshot creation and immediate deletion fix (bug #1662950)
         2.4.10 - Adding amended version (bug #1401297), no backward
                 compatibility issues
+        2.4.11 - detach issue when volume missing from backend (bug #1756368)
 
     """
 
-    VERSION = "2.4.10"
+    VERSION = "2.4.11"
 
     # ThirdPartySystems wiki
     CI_WIKI_NAME = "EMC_VMAX_CI"
